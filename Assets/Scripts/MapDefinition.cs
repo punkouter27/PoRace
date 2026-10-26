@@ -25,6 +25,22 @@ public class MapDefinition : ScriptableObject {
   public List<Vector2> centerline = new List<Vector2>();
   [Tooltip("Lane spacing multiplier over one lap (x = 0..1 of lap length). Below 1 squeezes the racers together.")]
   public AnimationCurve laneScale = AnimationCurve.Constant(0f, 1f, 1f);
+  [Tooltip("Cross-slope in degrees over one lap (x = 0..1 of lap length). Positive rises to the right of travel " +
+           "(a left-hand turn), pivoting on the left edge so that edge stays flush with the floor. 0 = flat.")]
+  public AnimationCurve bankDeg = AnimationCurve.Constant(0f, 1f, 0f);
+
+  /// <summary>Half-width of the banked surface: a little wider than the track so the rails stand on it.</summary>
+  public float BankHalfWidth => halfWidth + 0.15f;
+
+  public float BankAt(float s) => bankDeg.Evaluate(closed ? Mathf.Repeat(s, Length) / Length : Mathf.Clamp01(s / Length));
+
+  /// <summary>Track surface height (MuJoCo z) at arc length s, lateral offset from the centreline (positive = left).
+  /// The pivot edge (left for positive bank, right for negative) is at z = 0, flush with the floor.</summary>
+  public float SurfaceHeight(float s, float lateral) {
+    float b = BankAt(s);
+    if (Mathf.Abs(b) < 1e-3f) return 0f;
+    return Mathf.Max(0f, BankHalfWidth - Mathf.Sign(b) * lateral) * Mathf.Tan(Mathf.Abs(b) * Mathf.Deg2Rad);
+  }
 
   float[] _cum; float _length; int _n;
 
@@ -62,6 +78,20 @@ public class MapDefinition : ScriptableObject {
     var p = PointAt(s, out tangent);
     float u = closed ? Mathf.Repeat(s, Length) / Length : Mathf.Clamp01(s / Length);
     return p + Left(tangent) * laneOffset * laneScale.Evaluate(u);
+  }
+
+  /// <summary>Surface height under a point given in the MuJoCo plane: nearest centreline point, then SurfaceHeight.
+  /// Brute force over the segments (a few dozen), fine once per frame for the camera.</summary>
+  public float SurfaceHeightAt(Vector2 p) {
+    EnsureBuilt();
+    if (_n == 0) return 0f;
+    float best = float.MaxValue, bs = 0f, bl = 0f;
+    for (int i = 0; i < _n; i++) {
+      Vector2 a = P(i), d = P(i + 1) - a; float len = d.magnitude; if (len < 1e-6f) continue; d /= len;
+      float t = Mathf.Clamp(Vector2.Dot(p - a, d), 0f, len); var q = a + d * t; float dist = (p - q).sqrMagnitude;
+      if (dist < best) { best = dist; bs = _cum[i] + t; bl = Vector2.Dot(p - q, Left(d)); }
+    }
+    return SurfaceHeight(bs, bl);
   }
 
   /// <summary>Lane offsets for n racers, centred on the track, leftmost first.</summary>

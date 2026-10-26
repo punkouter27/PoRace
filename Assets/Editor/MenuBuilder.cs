@@ -59,7 +59,7 @@ public static class MenuBuilder {
     T(tr, "Version", new Vector2(1f, 0f), new Vector2(-70, 30), new Vector2(120, 30), 20, "v" + PlayerSettings.bundleVersion);
     EditorSceneManager.SaveScene(scene, "Assets/Scenes/Menu.unity");
 
-    foreach (var path in new[] { "Assets/Scenes/Track01x4.unity", "Assets/Scenes/Track02.unity" }) {
+    foreach (var path in new[] { "Assets/Scenes/Track01x4.unity", "Assets/Scenes/Track02.unity", "Assets/Scenes/Track03.unity" }) {
       if (!System.IO.File.Exists(path)) continue;
       var s = EditorSceneManager.OpenScene(path, OpenSceneMode.Single);
       var hud = Object.FindFirstObjectByType<Hud>();
@@ -67,7 +67,7 @@ public static class MenuBuilder {
       B(hud.transform, "BtnMenu", "Menu", new Vector2(1, 1), new Vector2(1, 1), new Vector2(-16, -154), new Vector2(130, 56), hud.OnMenu, Dark, 22);
       EditorSceneManager.SaveScene(s);
     }
-    EditorBuildSettings.scenes = new[] { "Assets/Scenes/Menu.unity", "Assets/Scenes/Track01x4.unity", "Assets/Scenes/Track02.unity", "Assets/Scenes/Testbed.unity" }
+    EditorBuildSettings.scenes = new[] { "Assets/Scenes/Menu.unity", "Assets/Scenes/Track01x4.unity", "Assets/Scenes/Track02.unity", "Assets/Scenes/Track03.unity", "Assets/Scenes/Testbed.unity" }
         .Where(System.IO.File.Exists).Select(p => new EditorBuildSettingsScene(p, true)).ToArray();
     EditorSceneManager.OpenScene("Assets/Scenes/Testbed.unity", OpenSceneMode.Single);
     Debug.Log("[MenuBuilder] Menu.unity saved; maps discovered=" + MapRegistry.All().Length);

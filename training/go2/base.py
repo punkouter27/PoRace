@@ -31,7 +31,7 @@ class Go2Env(mjx_env.MjxEnv):
     assert self._cube_qpos_adr == [C.NQ_ROBOT + 7 * k for k in range(C.NUM_CUBES)]
 
   def get_upvector(self, data): return mjx_env.get_sensor_data(self.mj_model, data, C.UPVECTOR_SENSOR)
-  def get_gravity(self, data): return data.site_xmat[self._imu_site_id].T @ jp.array([0, 0, -1])
+  def get_gravity(self, data, g_dir=jp.array([0, 0, -1])): return data.site_xmat[self._imu_site_id].T @ g_dir
   def get_global_linvel(self, data): return mjx_env.get_sensor_data(self.mj_model, data, C.GLOBAL_LINVEL_SENSOR)
   def get_global_angvel(self, data): return mjx_env.get_sensor_data(self.mj_model, data, C.GLOBAL_ANGVEL_SENSOR)
   def get_local_linvel(self, data): return mjx_env.get_sensor_data(self.mj_model, data, C.LOCAL_LINVEL_SENSOR)

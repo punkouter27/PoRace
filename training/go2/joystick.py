@@ -32,6 +32,10 @@ def default_config() -> config_dict.ConfigDict:
       pert_config=config_dict.create(enable=False, velocity_kick=[0.0, 3.0], kick_durations=[0.05, 0.2],
                                      kick_wait_times=[1.0, 3.0]),
       cube_config=config_dict.create(enable=False, wait_times=[1.0, 3.0], drop_height=1.0, xy_jitter=0.15),
+      # Slopes (banked turns, F.8) without touching the scene: gravity is tilted per env by a per-body force at the COM,
+      # m_b * 9.81 * (g_dir - (0,0,-1)), which is exactly a floor tilted the other way. The gravity obs uses g_dir, so
+      # the policy sees what the IMU reports on a real slope. The tilt ramps toward a new target every hold_times.
+      tilt_config=config_dict.create(enable=False, max_deg=17.0, p_flat=0.25, rate_deg=20.0, hold_times=[2.0, 6.0]),
       # Commands are sampled uniformly in [lo, a]; lo defaults to -a (symmetric). A racing policy uses a fast forward
       # range with a modest reverse, e.g. a=[3.0, 0.8, 1.2], lo=[-1.0, -0.8, -1.2].
       command_config=config_dict.create(a=[1.5, 0.8, 1.2], lo=[-1.5, -0.8, -1.2], b=[0.9, 0.25, 0.5]),
@@ -61,6 +65,8 @@ class Joystick(Go2Env):
     self._cmd_lo = jp.array(self._config.command_config.lo)
     self._cmd_b = jp.array(self._config.command_config.b)
     self._cube_park = jp.array(C.CUBE_PARK_QPOS)
+    self._robot_body_ids = jp.array([b for b in range(self._mj_model.nbody)
+                                     if self._mj_model.body_rootid[b] == self._torso_body_id])
 
   def reset(self, rng: jax.Array) -> mjx_env.State:
     qpos = self._init_q
@@ -76,7 +82,8 @@ class Joystick(Go2Env):
                              naconmax=self._config.naconmax, njmax=self._config.njmax)
     data = mjx.forward(self.mjx_model, data)
 
-    rng, k1, k2, k3, k4, k5, k6 = jax.random.split(rng, 7)
+    rng, k1, k2, k3, k4, k5, k6, k7, k8 = jax.random.split(rng, 9)
+    tilt = self._sample_tilt(k7)
     pc = self._config.pert_config
     pert_duration_seconds = jax.random.uniform(k2, minval=pc.kick_durations[0], maxval=pc.kick_durations[1])
     info = {
@@ -91,6 +98,7 @@ class Joystick(Go2Env):
         "steps_since_last_pert": 0, "pert_steps": 0, "pert_dir": jp.zeros(3),
         "pert_mag": jax.random.uniform(k3, minval=pc.velocity_kick[0], maxval=pc.velocity_kick[1]),
         "steps_until_next_cube": self._sample_cube_wait(k6), "next_cube": 0,
+        "tilt": tilt, "tilt_target": tilt, "steps_until_next_tilt": self._sample_tilt_hold(k8),
     }
     metrics = {f"reward/{k}": jp.zeros(()) for k in self._config.reward_config.scales.keys()}
     metrics["swing_peak"] = jp.zeros(())
@@ -121,11 +129,48 @@ class Joystick(Go2Env):
     state.info["steps_until_next_cube"] = jp.where(fire, self._sample_cube_wait(k2), state.info["steps_until_next_cube"] - 1)
     return state.replace(data=data)
 
+  def _sample_tilt(self, key):
+    """Tilt vector (radians): magnitude U(0, max_deg), uniform direction; exactly flat with probability p_flat."""
+    tc = self._config.tilt_config
+    k1, k2, k3 = jax.random.split(key, 3)
+    mag = jax.random.uniform(k1, maxval=jp.deg2rad(tc.max_deg)) * (jax.random.uniform(k3) >= tc.p_flat)
+    az = jax.random.uniform(k2, maxval=2 * jp.pi)
+    return mag * jp.array([jp.cos(az), jp.sin(az)]) * tc.enable
+
+  def _sample_tilt_hold(self, key):
+    tc = self._config.tilt_config
+    return jp.round(jax.random.uniform(key, minval=tc.hold_times[0], maxval=tc.hold_times[1]) / self.dt).astype(jp.int32)
+
+  @staticmethod
+  def gravity_dir(tilt):
+    """Unit gravity in the floor frame for a floor tilted by |tilt| rad, falling toward tilt/|tilt| (downhill)."""
+    a = jp.linalg.norm(tilt)
+    u = tilt / jp.maximum(a, 1e-9)
+    return jp.array([jp.sin(a) * u[0], jp.sin(a) * u[1], -jp.cos(a)])
+
+  def _update_tilt(self, state: mjx_env.State) -> mjx_env.State:
+    tc = self._config.tilt_config
+    state.info["rng"], k1, k2 = jax.random.split(state.info["rng"], 3)
+    due = state.info["steps_until_next_tilt"] <= 0
+    state.info["tilt_target"] = jp.where(due, self._sample_tilt(k1), state.info["tilt_target"])
+    state.info["steps_until_next_tilt"] = jp.where(due, self._sample_tilt_hold(k2), state.info["steps_until_next_tilt"] - 1)
+    d = state.info["tilt_target"] - state.info["tilt"]
+    step = jp.deg2rad(tc.rate_deg) * self.dt
+    state.info["tilt"] = state.info["tilt"] + d * jp.minimum(1.0, step / jp.maximum(jp.linalg.norm(d), 1e-9))
+    return state
+
   def step(self, state: mjx_env.State, action: jax.Array) -> mjx_env.State:
     if self._config.pert_config.enable:
       state = self._maybe_apply_perturbation(state)
     if self._config.cube_config.enable:
       state = self._maybe_drop_cube(state)
+    if self._config.tilt_config.enable:
+      # The kick above rewrites xfrc_applied every step (zeros between kicks), so the tilt is added on top, not accumulated.
+      state = self._update_tilt(state)
+      base = state.data.xfrc_applied if self._config.pert_config.enable else jp.zeros((self.mjx_model.nbody, 6))
+      dg = 9.81 * (self.gravity_dir(state.info["tilt"]) - jp.array([0.0, 0.0, -1.0]))
+      f = self.mjx_model.body_mass[self._robot_body_ids][:, None] * dg   # per-env masses under DR
+      state = state.replace(data=state.data.replace(xfrc_applied=base.at[self._robot_body_ids, :3].add(f)))
     motor_targets = self._default_pose + action * self._config.action_scale
     data = mjx_env.step(self.mjx_model, state.data, motor_targets, self.n_substeps)
 
@@ -172,7 +217,7 @@ class Joystick(Go2Env):
 
   def _get_obs(self, data: mjx.Data, info: dict[str, Any]) -> Dict[str, jax.Array]:
     ns = self._config.noise_config.scales
-    gyro, gravity = self.get_gyro(data), self.get_gravity(data)
+    gyro, gravity = self.get_gyro(data), self.get_gravity(data, self.gravity_dir(info["tilt"]))
     joint_angles, joint_vel, linvel = data.qpos[Q], data.qvel[V], self.get_local_linvel(data)
     state = jp.hstack([
         self.noisy(info, linvel, ns.linvel), self.noisy(info, gyro, ns.gyro), self.noisy(info, gravity, ns.gravity),

@@ -101,7 +101,9 @@ public unsafe class MultiRaceOrchestrator : MonoBehaviour {
 
   void Spawn(Racer r, float s) {
     var p = map.LanePoint(s, r.lane, out var t);
-    r.controller.spawnMj = new Vector3(p.x, p.y, Go2Controller.HomeHeight);
+    // On a bank the uphill feet of a level-spawned dog would start inside the surface: lift by the slope over the stance.
+    float lateral = Vector2.Dot(p - map.PointAt(s, out _), MapDefinition.Left(t)), bank = Mathf.Abs(map.BankAt(s)) * Mathf.Deg2Rad;
+    r.controller.spawnMj = new Vector3(p.x, p.y, Go2Controller.HomeHeight + map.SurfaceHeight(s, lateral) + 0.2f * Mathf.Tan(bank));
     r.controller.spawnYaw = Mathf.Atan2(t.y, t.x);
   }
 
@@ -196,7 +198,10 @@ public unsafe class MultiRaceOrchestrator : MonoBehaviour {
     var order = Standings();
     if (followCam != null) {
       // Frame the pack: an anchor at the mean position of the racers still running, looking along the track there.
-      if (_anchor == null) { _anchor = new GameObject("PackAnchor").transform; followCam.target = _anchor; }
+      if (_anchor == null) {
+        _anchor = new GameObject("PackAnchor").transform; followCam.target = _anchor;
+        followCam.groundHeight = u => map.SurfaceHeightAt(new Vector2(u.x, u.z));   // Unity (x, z) = MuJoCo (x, y)
+      }
       var run = order.Where(r => r.finishTime < 0 && r.controller.BaseTransform != null).ToList();
       if (run.Count == 0) run = order.Where(r => r.controller.BaseTransform != null).ToList();
       if (run.Count > 0) {

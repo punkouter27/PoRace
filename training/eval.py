@@ -4,6 +4,7 @@
   python eval.py --rung r1 --params runs/r1/params.pkl        # velocity tracking error < 0.2 m/s, 10 seeds
   python eval.py --rung r2 --params runs/r2/params.pkl        # 30 N.s push + 1 kg cube drop, 9/10 seeds
   python eval.py --rung r3 --params runs/r3/params.pkl        # getup: standing within 3 s from fallen, 9/10 seeds
+  python eval.py --rung bank --params runs/r5/params.pkl      # 15 deg slope, straight + circling, 9/10 seeds
 """
 import argparse
 
@@ -70,6 +71,27 @@ class Sim:
     ang = rng.uniform(0, 2 * np.pi); n = 25  # 0.1 s
     self.d.xfrc_applied[self.base, :3] = np.array([np.cos(ang), np.sin(ang), 0]) * impulse / (n * C.SIM_DT)
     self._push_steps = n
+
+  def tilt_floor(self, deg, downhill_az):
+    """Real slope: rotate the floor plane (through the origin) so it falls toward azimuth downhill_az. Unlike training
+    (tilted gravity), the obs keep world z, as in Unity. Parked cubes would end up inside the plane, so their
+    contacts are switched off."""
+    a = np.deg2rad(deg); axis = np.array([-np.sin(downhill_az), np.cos(downhill_az), 0.0])
+    q = np.zeros(4); mujoco.mju_axisAngle2Quat(q, axis, a)
+    # Recompile: static world-geom poses are fixed at compile time, so editing m.geom_quat afterwards does nothing.
+    spec = mujoco.MjSpec.from_file(str(C.SCENE_XML))
+    spec.geom("floor").quat = q
+    for b in C.CUBE_BODIES:
+      for g in spec.body(b).geoms: g.contype = g.conaffinity = 0
+    self.m = spec.compile(); self.d = mujoco.MjData(self.m); self.floor_q = q
+
+  def stand_on_floor(self):
+    """After reset on a tilted floor: rotate the home pose onto the slope (feet on the plane, as a dog arriving on it
+    would be) instead of starting level with the uphill feet inside the floor."""
+    R = np.zeros(9); mujoco.mju_quat2Mat(R, self.floor_q)
+    self.d.qpos[0:3] = R.reshape(3, 3) @ self.d.qpos[0:3]
+    q = np.zeros(4); mujoco.mju_mulQuat(q, self.floor_q, self.d.qpos[3:7].copy()); self.d.qpos[3:7] = q
+    mujoco.mj_forward(self.m, self.d)
 
   def drop_cube(self, k):
     q = C.NQ_ROBOT + 7 * k
@@ -148,6 +170,28 @@ def run_crowd_getup(getup_params, seeds):
   return passes >= need
 
 
+def run_bank(loco_params, seeds, deg=15.0):
+  """Banked track (F.8): floor tilted deg in a random direction. 1.5 m/s straight, then 1.0 m/s with yaw 0.8 rad/s
+  (a full circle sweeps every heading relative to the slope), then 1.5 m/s straight; 3 s each.
+  Pass: upright throughout and mean tracking error < 0.3 m/s after each 1 s transient. Bar 90 %."""
+  passes = 0
+  for seed in range(seeds):
+    rng = np.random.default_rng(seed); sim = Sim(loco_params, "joystick")
+    sim.tilt_floor(deg, rng.uniform(0, 2 * np.pi)); sim.reset(rng); sim.stand_on_floor(); errs = []; ok = True
+    for cmd in ([1.5, 0, 0], [1.0, 0, 0.8], [1.5, 0, 0]):
+      cmd = np.array(cmd, np.float32)
+      for k in range(int(3 / C.CTRL_DT)):
+        sim.control_step(cmd); ok &= sim.upright()
+        if k >= int(1 / C.CTRL_DT):
+          v = sim.sensor(C.LOCAL_LINVEL_SENSOR); w = sim.sensor(C.GYRO_SENSOR)
+          errs.append(np.linalg.norm([v[0] - cmd[0], v[1] - cmd[1], 0.5 * (w[2] - cmd[2])]))
+    e = float(np.mean(errs)); ok &= e < 0.3
+    print(f"seed {seed}: {deg:.0f} deg bank, mean vel err {e:.3f} {'OK' if ok else 'FAIL'}"); passes += ok
+  need = int(0.9 * seeds)
+  print(f"BANK {deg:.0f}: {passes}/{seeds} passed (need {need}) -> {'PASS' if passes >= need else 'FAIL'}")
+  return passes >= need
+
+
 def run_combo(loco_params, getup_params, seeds):
   """Walk at 0.5 m/s, get flipped onto a random fallen pose at 2 s, stand up with the getup policy, switch back
   (same rule as Unity: Getup when upvector z < 0, Locomotion after 0.5 s with z > 0.9) and walk again.
@@ -185,11 +229,14 @@ def run_combo(loco_params, getup_params, seeds):
 
 if __name__ == "__main__":
   ap = argparse.ArgumentParser()
-  ap.add_argument("--rung", choices=["r0", "r1", "r2", "r3", "combo", "crowd"], required=True)
+  ap.add_argument("--rung", choices=["r0", "r1", "r2", "r3", "combo", "crowd", "bank"], required=True)
   ap.add_argument("--getup_params")
   ap.add_argument("--params", required=True)
   ap.add_argument("--seeds", type=int, default=10)
+  ap.add_argument("--deg", type=float, default=15.0, help="bank: slope in degrees")
   a = ap.parse_args()
+  if a.rung == "bank":
+    raise SystemExit(0 if run_bank(brax_model.load_params(a.params), a.seeds, a.deg) else 1)
   if a.rung == "crowd":
     raise SystemExit(0 if run_crowd_getup(brax_model.load_params(a.params), a.seeds) else 1)
   if a.rung == "combo":

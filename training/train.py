@@ -3,6 +3,7 @@
   python train.py --env joystick --timesteps 200000000 --logdir runs/r1
   python train.py --env joystick --pert --cubes --dr --restore runs/r1/checkpoints --logdir runs/r2
   python train.py --env getup --logdir runs/r3
+  python train.py --env joystick --pert --cubes --dr --vx_max 2.5 --tilt_max 17 --restore_params final/go2_loco_params.pkl --logdir runs/r5
 Outputs: <logdir>/tb (TensorBoard), <logdir>/checkpoints/<step>, <logdir>/params.pkl (brax.io.model).
 """
 import argparse
@@ -43,7 +44,7 @@ ENVS = {"joystick": (joystick.Joystick, joystick.default_config, "Go1JoystickFla
 CONTACTS_PER_ENV = 30  # full-collision Go2 lying on the floor; fewer drops contacts and bodies sink
 
 
-def make_env(name, pert=False, cubes=False, num_worlds=8192, kick_max=None, vx_max=None):
+def make_env(name, pert=False, cubes=False, num_worlds=8192, kick_max=None, vx_max=None, tilt_max=None):
   cls, cfg_fn, _ = ENVS[name]
   cfg = cfg_fn()
   # naconmax is a TOTAL across worlds. Size it to the worlds this env instance really runs, otherwise the
@@ -63,6 +64,9 @@ def make_env(name, pert=False, cubes=False, num_worlds=8192, kick_max=None, vx_m
     if vx_max is not None:
       cfg.command_config.a = [float(vx_max), 0.8, 1.2]; cfg.command_config.lo = [-1.0, -0.8, -1.2]
       cfg.reward_config.sigma_speed_scale = True   # see joystick.py: needed for commands the policy cannot reach yet
+    # Slopes up to tilt_max degrees in any direction (banked turns are ~15 degrees of cross-slope).
+    if tilt_max is not None:
+      cfg.tilt_config.enable = True; cfg.tilt_config.max_deg = float(tilt_max)
   return cls(config=cfg), cfg
 
 
@@ -74,7 +78,9 @@ def main():
   ap.add_argument("--seed", type=int, default=1)
   ap.add_argument("--logdir", default=None)
   ap.add_argument("--restore", default=None, help="checkpoint dir (latest step) or a specific step dir")
+  ap.add_argument("--restore_params", default=None, help="params.pkl (normalizer, policy, value) to start from, e.g. final/go2_loco_params.pkl")
   ap.add_argument("--vx_max", type=float, default=None, help="max forward command in m/s (default 1.5)")
+  ap.add_argument("--tilt_max", type=float, default=None, help="train on slopes up to this many degrees (tilted gravity)")
   ap.add_argument("--kick_max", type=float, default=None, help="max velocity kick in m/s (impulse = 0.318*mass*kick)")
   ap.add_argument("--pert", action="store_true"); ap.add_argument("--cubes", action="store_true"); ap.add_argument("--dr", action="store_true")
   a = ap.parse_args()
@@ -82,8 +88,8 @@ def main():
   ppo_params = locomotion_params.brax_ppo_config(ENVS[a.env][2])
   if a.timesteps is not None: ppo_params.num_timesteps = a.timesteps
   if a.num_envs is not None: ppo_params.num_envs = a.num_envs
-  env, cfg = make_env(a.env, a.pert, a.cubes, num_worlds=ppo_params.num_envs, kick_max=a.kick_max, vx_max=a.vx_max)
-  eval_env, _ = make_env(a.env, a.pert, a.cubes, num_worlds=ppo_params.get("num_eval_envs", 128), kick_max=a.kick_max, vx_max=a.vx_max)
+  env, cfg = make_env(a.env, a.pert, a.cubes, num_worlds=ppo_params.num_envs, kick_max=a.kick_max, vx_max=a.vx_max, tilt_max=a.tilt_max)
+  eval_env, _ = make_env(a.env, a.pert, a.cubes, num_worlds=ppo_params.get("num_eval_envs", 128), kick_max=a.kick_max, vx_max=a.vx_max, tilt_max=a.tilt_max)
   logdir = Path(a.logdir or f"runs/{a.env}-{time.strftime('%Y%m%d-%H%M%S')}").resolve()
   ckpt = logdir / "checkpoints"; ckpt.mkdir(parents=True, exist_ok=True)
   (ckpt / "config.json").write_text(json.dumps(cfg.to_dict(), indent=1, default=str))
@@ -114,6 +120,7 @@ def main():
   make_inference_fn, params, _ = ppo.train(
       environment=env, eval_env=eval_env, progress_fn=progress, seed=a.seed, num_eval_envs=num_eval_envs,
       network_factory=network_factory, restore_checkpoint_path=restore, save_checkpoint_path=str(ckpt),
+      restore_params=brax_model.load_params(a.restore_params) if a.restore_params else None,
       wrap_env_fn=wrapper.wrap_for_brax_training, **training_params)
   brax_model.save_params(str(logdir / "params.pkl"), params)
   print("saved", logdir / "params.pkl", "in", f"{time.monotonic() - t0:.0f}s")

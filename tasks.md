@@ -75,10 +75,11 @@ Mark `[x]` when done. Each task is one commit.
 - [x] F.5 `MapDefinition` assets in `Assets/Resources/Maps` discovered by `MapRegistry`; `TrackBuilder` (editor) builds MuJoCo rails + visuals from the centerline. Map 02 Flat Oval (97.6 m lap, two 180 degree turns of radius 6 m), laps, track-frame chase camera. All four finish 2 laps with no respawns.
 - [x] F.6 Randomized races: seeded lane draw and 6 % cruise-speed spread per race (`-seed N` reproduces a race).
 - [x] F.7 Pre-race menu (`Menu.unity`, `MenuController`): map selector from the registry, racers 1-4, laps 1-5, Start; Menu button on the race HUD. One combined build `Build/PoRace/PoRace.exe`.
-- [ ] F.8 Banked turns (PRD Map 02 calls for 15 degree banking): needs a policy trained on slopes.
+- [x] F.8 Banked turns (15 degrees): tilted-gravity slope training (`--tilt_max 17`), `eval.py --rung bank`, Map 03 Banked Oval / `Track03.unity` (324 convex mesh-geom pieces, rails on the surface), `go2_loco_bank.onnx` (r7 @ 29.5M) on Track03 only. Headless seeds 1-5: 20/20 finish, 0 un-sticks/respawns/flips. Known gap: bank eval 6/10, all failures are uphill starts from standstill at 1.5 m/s.
+- [ ] F.9 Faster dog (commands above 1.5 m/s): attempt 2 (`runs/r5`, speed-scaled sigma) froze again; see log 2026-10-26.
 
 ## Phase E: Later (tracked, not scheduled)
-- [ ] E.1 Android: build mujoco C library for arm64, swap plugin native binary, portrait build.
+- [x] E.1 Android: `tools/android/build_mujoco_android.sh` -> `Assets/Plugins/Android/arm64-v8a/libmujoco.so` (MuJoCo 3.15.0, API 28, 16 KB pages). Pixel 9 Pro: ModelCheck OK x4, 60 fps, 0.40 ms inference. Min SDK 28.
 - [ ] E.2 CreatureDefinition / MapDefinition registries and pre-race menu (PRD FR-01..03).
 - [ ] E.3 Rough terrain rung (heightfield scan obs) and multi-agent racing rung.
 - [ ] E.4 G1 / H1 / DeepMimic biped onboarding through the same gates.

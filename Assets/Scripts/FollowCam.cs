@@ -11,6 +11,9 @@ public class FollowCam : MonoBehaviour {
   public Vector3 lookAhead = Vector3.zero;
   public float smooth = 4f;
   [System.NonSerialized] public Vector3 forward = Vector3.right;   // travel direction on the ground (Unity frame)
+  /// <summary>Optional track surface height under a Unity position (banked tracks); the camera stays clearance above it.</summary>
+  [System.NonSerialized] public System.Func<Vector3, float> groundHeight;
+  public float clearance = 0.6f;
 
   Vector3 ToWorld(Vector3 v) {
     var f = new Vector3(forward.x, 0f, forward.z).normalized; if (f.sqrMagnitude < 0.5f) f = Vector3.right;
@@ -21,7 +24,9 @@ public class FollowCam : MonoBehaviour {
   void LateUpdate() {
     if (target == null) return;
     var want = target.position + ToWorld(offset);
-    transform.position = Vector3.Lerp(transform.position, want, 1f - Mathf.Exp(-smooth * Time.deltaTime));
+    var p = Vector3.Lerp(transform.position, want, 1f - Mathf.Exp(-smooth * Time.deltaTime));
+    if (groundHeight != null) p.y = Mathf.Max(p.y, groundHeight(p) + clearance);   // never inside a bank
+    transform.position = p;
     transform.LookAt(target.position + Vector3.up * 0.1f + ToWorld(lookAhead));
   }
 }
