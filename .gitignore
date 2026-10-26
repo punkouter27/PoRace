@@ -113,3 +113,7 @@ training/.venv/
 training/runs/
 training/checkpoints/
 *.onnx.tmp
+
+# Local tooling (Aura code-graph extension)
+.aura/
+.vscode/mcp.json

@@ -41,14 +41,20 @@ namespace PoRace.EditorTools
                 Run(File.ReadAllText(passFile).Trim());
         }
 
+        /// The MuJoCo arm64 build (tools/android/build_mujoco_android.sh). The org.mujoco package ships only the
+        /// Windows mujoco.dll; without this the bundle builds and signs fine but every race dies on DllNotFoundException.
+        const string MUJOCO_SO = "Assets/Plugins/Android/arm64-v8a/libmujoco.so";
+
         /// Project-specific setup before the build; returns what is missing, or null when ready.
-        static string Prepare() => null;
+        static string Prepare() =>
+            File.Exists(MUJOCO_SO) ? null : MUJOCO_SO + " missing (run tools/android/build_mujoco_android.sh)";
 
         static void Run(string pass)
         {
             PlayerSettings.SetApplicationIdentifier(NamedBuildTarget.Android, APP_ID);
             PlayerSettings.companyName = "Punkouter Software";
             PlayerSettings.Android.targetSdkVersion = (AndroidSdkVersions)36;   // Play's floor since 2026-08-31
+            PlayerSettings.Android.minSdkVersion = AndroidSdkVersions.AndroidApiLevel28;   // libmujoco.so is built for API 28 (aligned_alloc)
             PlayerSettings.Android.targetArchitectures = AndroidArchitecture.ARM64;
             PlayerSettings.SetScriptingBackend(NamedBuildTarget.Android, ScriptingImplementation.IL2CPP);
             PlayerSettings.Android.bundleVersionCode++;   // Play rejects a reused versionCode
