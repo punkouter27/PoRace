@@ -49,6 +49,12 @@ public unsafe class RaceTelemetry : MonoBehaviour {
     for (int i = 0; i + 1 < args.Length; i++) { if (args[i] == "-telemetryDir") _dir = args[i + 1]; if (args[i] == "-azureTableSas") _sas = args[i + 1]; }
     if (string.IsNullOrEmpty(_sas)) _sas = Environment.GetEnvironmentVariable("PORACE_AZURE_TABLE_SAS");
     if (string.IsNullOrEmpty(_sas)) _sas = PlayerPrefs.GetString("PoRace.azureSas", "");
+    // The SAS URL is a write token: never send it anywhere but an Azure table endpoint over https.
+    if (!string.IsNullOrEmpty(_sas) && !(Uri.TryCreate(_sas, UriKind.Absolute, out var u) && u.Scheme == Uri.UriSchemeHttps
+                                         && u.Host.EndsWith(".table.core.windows.net", StringComparison.OrdinalIgnoreCase))) {
+      Debug.LogWarning("[Telemetry] Azure upload off: the SAS URL must be https://<account>.table.core.windows.net/...");
+      _sas = null;
+    }
     race.PhaseChanged += p => { if (p == RacePhase.Racing) Open(); if (p == RacePhase.Finished) Close(true); };
     race.Restarted += () => { Close(false); if (_card != null) _card.gameObject.SetActive(false); };
     if (!BroadcastUi.Headless) {
@@ -82,8 +88,7 @@ public unsafe class RaceTelemetry : MonoBehaviour {
     var d = MjScene.Instance.Data; var ci = CultureInfo.InvariantCulture;
     foreach (var r in race.Live) {
       var s = sensors.Of(r); if (s == null) continue; var B = r.Body; var c = B.Command;
-      double qw = d->qpos[B.BaseQpos + 3], qx = d->qpos[B.BaseQpos + 4], qy = d->qpos[B.BaseQpos + 5], qz = d->qpos[B.BaseQpos + 6];
-      double yaw = Math.Atan2(2 * (qw * qz + qx * qy), 1 - 2 * (qy * qy + qz * qz));
+      double yaw = RacerMath.Yaw(d->qpos, B.BaseQpos);
       _sb.Clear();
       _sb.AppendFormat(ci, "{{\"t\":{0:F2},\"racer\":\"{1}\",\"x\":{2:F3},\"y\":{3:F3},\"z\":{4:F3},\"yaw\":{5:F3},\"v\":{6:F3},\"cmd\":[{7:F2},{8:F2},{9:F2}],",
           race.RaceTime, r.name, d->qpos[B.BaseQpos], d->qpos[B.BaseQpos + 1], d->qpos[B.BaseQpos + 2], yaw, s.speed, c.x, c.y, c.z);

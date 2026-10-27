@@ -35,4 +35,56 @@ public unsafe interface IRacer {
   void StartLocomotion();
 }
 
+/// <summary>Pieces shared by the creature controllers (Go2, Matt, G1) and the race loop. MuJoCo frame (x, y, z up);
+/// a free joint's qpos is position 3 + quaternion (w, x, y, z).</summary>
+public static unsafe class RacerMath {
+  /// <summary>Heading about z of the free joint whose qpos starts at `adr`.</summary>
+  public static double Yaw(double* qpos, int adr) {
+    double qw = qpos[adr + 3], qx = qpos[adr + 4], qy = qpos[adr + 5], qz = qpos[adr + 6];
+    return System.Math.Atan2(2 * (qw * qz + qx * qy), 1 - 2 * (qy * qy + qz * qz));
+  }
+
+  /// <summary>Put the free joint whose qpos starts at `adr` at `pos`, turned `yaw` rad about z.</summary>
+  public static void Place(double* qpos, int adr, Vector3 pos, float yaw) {
+    qpos[adr] = pos.x; qpos[adr + 1] = pos.y; qpos[adr + 2] = pos.z;
+    qpos[adr + 3] = System.Math.Cos(yaw * 0.5); qpos[adr + 4] = 0; qpos[adr + 5] = 0; qpos[adr + 6] = System.Math.Sin(yaw * 0.5);
+  }
+
+  /// <summary>Sensor part of an observation, snapshotted before mj_step1 (trainer sensor age) into
+  /// sens = local linvel 3, gyro 3, orientation quaternion 4, up-vector z.</summary>
+  public static void Snapshot(double* sensordata, int linvel, int gyro, int quat, int up, double[] sens) {
+    for (int i = 0; i < 3; i++) { sens[i] = sensordata[linvel + i]; sens[3 + i] = sensordata[gyro + i]; }
+    for (int i = 0; i < 4; i++) sens[6 + i] = sensordata[quat + i];
+    sens[10] = sensordata[up + 2];
+  }
+
+  /// <summary>Projected gravity R^T * (0, 0, -1) from the snapshot quaternion (sens[6..9]), appended to obs at k.</summary>
+  public static void Gravity(double[] sens, float[] obs, ref int k) {
+    double w = sens[6], x = sens[7], y = sens[8], z = sens[9];
+    obs[k++] = (float)(-2 * (x * z - w * y));
+    obs[k++] = (float)(-2 * (y * z + w * x));
+    obs[k++] = (float)(-(1 - 2 * (x * x + y * y)));
+  }
+
+  /// <summary>Slew-limited joystick command: each component moves at most `step` toward the target.</summary>
+  public static Vector3 Slew(Vector3 from, Vector3 to, float step) =>
+    new Vector3(Mathf.MoveTowards(from.x, to.x, step), Mathf.MoveTowards(from.y, to.y, step), Mathf.MoveTowards(from.z, to.z, step));
+
+  /// <summary>Two-foot gait clock of mujoco_playground's G1 env at control step n: cos L, cos R, sin L, sin R.</summary>
+  public static void GaitPhase(float[] obs, ref int k, int n, double dphi) {
+    double pl = Wrap(n * dphi), pr = Wrap(System.Math.PI + n * dphi);
+    obs[k++] = (float)System.Math.Cos(pl); obs[k++] = (float)System.Math.Cos(pr); obs[k++] = (float)System.Math.Sin(pl); obs[k++] = (float)System.Math.Sin(pr);
+  }
+  static double Wrap(double p) { p = (p + System.Math.PI) % (2 * System.Math.PI); if (p < 0) p += 2 * System.Math.PI; return p - System.Math.PI; }
+
+  /// <summary>Headless harness flag "-command vx vy yaw" (the last one wins); false when absent.</summary>
+  public static bool TryCommandArg(out Vector3 cmd) {
+    var args = System.Environment.GetCommandLineArgs(); var ci = System.Globalization.CultureInfo.InvariantCulture;
+    bool found = false; cmd = Vector3.zero;
+    for (int i = 0; i + 3 < args.Length; i++)
+      if (args[i] == "-command") { cmd = new Vector3(float.Parse(args[i + 1], ci), float.Parse(args[i + 2], ci), float.Parse(args[i + 3], ci)); found = true; }
+    return found;
+  }
+}
+
 }

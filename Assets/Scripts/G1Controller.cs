@@ -48,20 +48,22 @@ public unsafe class G1Controller : MonoBehaviour, IParitySource {
   void Awake() {
     Time.fixedDeltaTime = G1Spec.SimDt;
     var args = Environment.GetCommandLineArgs();
-    for (int i = 0; i < args.Length; i++) {
-      if (args[i] == "-command" && i + 3 < args.Length)
-        command = new Vector3(float.Parse(args[i + 1], System.Globalization.CultureInfo.InvariantCulture),
-                              float.Parse(args[i + 2], System.Globalization.CultureInfo.InvariantCulture),
-                              float.Parse(args[i + 3], System.Globalization.CultureInfo.InvariantCulture));
-      if (args[i] == "-mode" && i + 1 < args.Length && Enum.TryParse(args[i + 1], out Mode m)) mode = m;
-    }
+    if (RacerMath.TryCommandArg(out var cmd)) command = cmd;
+    for (int i = 0; i + 1 < args.Length; i++) if (args[i] == "-mode" && Enum.TryParse(args[i + 1], out Mode m)) mode = m;
     MjScene.Instance.postInitEvent += OnInit;
     MjScene.Instance.preUpdateEvent += OnPre;
     MjScene.Instance.ctrlCallback += OnCtrl;
   }
 
+  void OnDestroy() {
+    _policy?.Dispose(); _policy = null;
+    if (!MjScene.InstanceExists) return;
+    MjScene.Instance.postInitEvent -= OnInit;
+    MjScene.Instance.preUpdateEvent -= OnPre;
+    MjScene.Instance.ctrlCallback -= OnCtrl;
+  }
+
   void Start() { if (locomotionModel != null) _policy = new PolicyRunner(locomotionModel, G1Spec.ObsDim, N); }
-  void OnApplicationQuit() { _policy?.Dispose(); }
 
   static int Id(MujocoLib.mjModel_* m, MujocoLib.mjtObj t, string name) {
     int id = MujocoLib.mj_name2id(m, (int)t, name);
@@ -123,18 +125,14 @@ public unsafe class G1Controller : MonoBehaviour, IParitySource {
   void SetCtrl(MujocoLib.mjData_* d, int i, float v) { d->ctrl[_act[i]] = v; _actComp[i].Control = v; }
 
   void OnPre(object sender, MjStepArgs a) {
-    if (!_ready) return; var d = a.data;
-    for (int i = 0; i < 3; i++) { _sens[i] = d->sensordata[_linvel + i]; _sens[3 + i] = d->sensordata[_gyro + i]; }
-    for (int i = 0; i < 4; i++) _sens[6 + i] = d->sensordata[_quat + i];
-    _sens[10] = d->sensordata[_up + 2];
+    if (_ready) RacerMath.Snapshot(a.data->sensordata, _linvel, _gyro, _quat, _up, _sens);
   }
 
   void OnCtrl(object sender, MjStepArgs a) {
     if (!_ready || _step++ % G1Spec.Decimation != 0) return;
     var d = a.data;
     Upright = _sens[10] > 0.0;
-    _cmd = new Vector3(Mathf.MoveTowards(_cmd.x, command.x, Go2Controller.CmdSlewStep), Mathf.MoveTowards(_cmd.y, command.y, Go2Controller.CmdSlewStep),
-                       Mathf.MoveTowards(_cmd.z, command.z, Go2Controller.CmdSlewStep));
+    _cmd = RacerMath.Slew(_cmd, command, Go2Controller.CmdSlewStep);
     BuildObs(d);
     var t0 = Time.realtimeSinceStartupAsDouble;
     if (mode == Mode.Locomotion && _policy != null) {
@@ -153,18 +151,13 @@ public unsafe class G1Controller : MonoBehaviour, IParitySource {
     int k = 0;
     for (int i = 0; i < 3; i++) _obs[k++] = (float)_sens[i];
     for (int i = 0; i < 3; i++) _obs[k++] = (float)_sens[3 + i];
-    double w = _sens[6], x = _sens[7], y = _sens[8], z = _sens[9];
-    _obs[k++] = (float)(-2 * (x * z - w * y)); _obs[k++] = (float)(-2 * (y * z + w * x)); _obs[k++] = (float)(-(1 - 2 * (x * x + y * y)));
+    RacerMath.Gravity(_sens, _obs, ref k);
     _obs[k++] = _cmd.x; _obs[k++] = _cmd.y; _obs[k++] = _cmd.z;
     for (int i = 0; i < N; i++) _obs[k++] = (float)(d->qpos[_jq[i]] - G1Spec.DefaultPose[i]);
     for (int i = 0; i < N; i++) _obs[k++] = (float)d->qvel[_jd[i]];
     for (int i = 0; i < N; i++) _obs[k++] = _lastAction[i];
-    double dphi = 2 * Math.PI * G1Spec.SimDt * G1Spec.Decimation * G1Spec.GaitHz;
-    int n = Math.Max(0, _ctrlStep - 1);
-    double pl = Wrap(n * dphi), pr = Wrap(Math.PI + n * dphi);
-    _obs[k++] = (float)Math.Cos(pl); _obs[k++] = (float)Math.Cos(pr); _obs[k++] = (float)Math.Sin(pl); _obs[k++] = (float)Math.Sin(pr);
+    RacerMath.GaitPhase(_obs, ref k, Math.Max(0, _ctrlStep - 1), 2 * Math.PI * G1Spec.SimDt * G1Spec.Decimation * G1Spec.GaitHz);
   }
-  static double Wrap(double p) { p = (p + Math.PI) % (2 * Math.PI); if (p < 0) p += 2 * Math.PI; return p - Math.PI; }
 
   public void Canonical(MujocoLib.mjData_* d, double[] qpos, double[] qvel, double[] ctrl) {
     for (int i = 0; i < 7; i++) qpos[i] = d->qpos[BaseQpos + i];

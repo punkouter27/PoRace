@@ -166,7 +166,7 @@ public static class RaceConfig {
   public static int seed = -1;       // -1 = different every race
   public static bool fromMenu = false;
   public static string twitchChannel = "";   // live chat hazards / bets (anonymous read-only IRC); "" = off
-  public static int weatherCity = 0;         // index into TrackWeather.Cities; -1 = off
+  public static int weatherCity = -1;        // index into TrackWeather.Cities; -1 = off (default: no network unless picked)
 }
 
 }

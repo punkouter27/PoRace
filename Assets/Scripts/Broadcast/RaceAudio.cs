@@ -144,8 +144,10 @@ public class RaceAudio : MonoBehaviour {
     float wet = Wetness, decay = 1f - Mathf.Exp(-Time.deltaTime / 0.12f);
     foreach (var kv in _loops) {
       var l = kv.Value; var s = sensors.Of(kv.Key); if (s == null) continue;
-      float effort = 0f; foreach (var e in s.effort) effort += e; effort /= s.effort.Length;
-      float jointSpeed = s.power / Mathf.Max(1f, effort * RaceSensors.ForceRange * s.effort.Length);   // ~ mean |qdot|
+      // sum |tau| from each joint's own forcerange (Matt's reach 250 N·m; the dogs' are all RaceSensors.ForceRange)
+      float effort = 0f, torque = 0f; for (int i = 0; i < s.effort.Length; i++) { effort += s.effort[i]; torque += s.effort[i] * s.forceMax[i]; }
+      effort /= s.effort.Length;
+      float jointSpeed = s.power / Mathf.Max(1f, torque);   // ~ mean |qdot|
       l.whine.pitch = Mathf.Lerp(l.whine.pitch, 0.7f + 0.06f * Mathf.Min(jointSpeed, 12f), 0.2f);
       l.whine.volume = Mathf.Lerp(l.whine.volume, master * Mathf.Clamp01(0.03f + 0.35f * effort), 0.2f);
       float k = Mathf.Clamp01((l.slip - 0.15f) / 1.2f);

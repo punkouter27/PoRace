@@ -67,14 +67,13 @@ public unsafe class RaceOrchestrator : MonoBehaviour {
 
   void OnPostStep(object sender, MjStepArgs a) {
     var M = controller.Model; if (M == null || waypoints.Count == 0) return;
-    var d = a.data; double t = d->time; _lastSim = t;
-    if (t < _lastSimSeen) { _t0 = -1; }  // sim time went backwards: the robot was reset (mj_resetData zeroes time)
-    _lastSimSeen = t;
+    var d = a.data; double t = d->time;
+    if (t < _lastSim) { _t0 = -1; }  // sim time went backwards: the robot was reset (mj_resetData zeroes time)
+    _lastSim = t;
     if (_t0 < 0) { _t0 = t; if (Phase == RacePhase.Racing) _raceStart = t - RaceTime; }
 
     var pos = new Vector2((float)d->qpos[M.BaseQpos], (float)d->qpos[M.BaseQpos + 1]);
-    double qw = d->qpos[M.BaseQpos + 3], qx = d->qpos[M.BaseQpos + 4], qy = d->qpos[M.BaseQpos + 5], qz = d->qpos[M.BaseQpos + 6];
-    float yaw = (float)Math.Atan2(2 * (qw * qz + qx * qy), 1 - 2 * (qy * qy + qz * qz));
+    float yaw = (float)RacerMath.Yaw(d->qpos, M.BaseQpos);
 
     switch (Phase) {
       case RacePhase.Countdown:
@@ -113,7 +112,7 @@ public unsafe class RaceOrchestrator : MonoBehaviour {
       Application.Quit(ok ? 0 : 1);
     }
   }
-  double _lastSimSeen, _flipAt = -1; int _flips;
+  double _flipAt = -1; int _flips;
 
   static float DistanceToCenterline(Vector2 p, Vector2 a, Vector2 b) {
     var dir = (b - a).normalized; var n = new Vector2(-dir.y, dir.x);

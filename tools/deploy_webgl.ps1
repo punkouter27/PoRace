@@ -34,8 +34,13 @@ if (-not $token) {
     throw "No deployment token for $AppName in $ResourceGroup. Signed in? az account show"
 }
 
-npx --yes "@azure/static-web-apps-cli@2.0.10" deploy $BuildDir `
-    --deployment-token $token --env production
+# The CLI reads the token from the environment, so it never shows up in process listings.
+$env:SWA_CLI_DEPLOYMENT_TOKEN = $token
+try {
+    npx --yes "@azure/static-web-apps-cli@2.0.10" deploy $BuildDir --env production
+} finally {
+    Remove-Item Env:SWA_CLI_DEPLOYMENT_TOKEN -ErrorAction SilentlyContinue
+}
 if ($LASTEXITCODE -ne 0) {
     throw "swa deploy failed ($LASTEXITCODE)."
 }

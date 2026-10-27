@@ -25,7 +25,6 @@ public class Predictions : MonoBehaviour {
   bool _settled; Image _panel; Text _title; readonly List<(Racer r, Text t)> _rows = new List<(Racer, Text)>();
 
   public static int Points { get => PlayerPrefs.GetInt(PointsKey, 1000); set { PlayerPrefs.SetInt(PointsKey, value); PlayerPrefs.Save(); } }
-  public float Odds(Racer r) => _odds.TryGetValue(r, out var o) ? o : 0f;
   public float WinChance(Racer r) => _live.TryGetValue(r, out var p) ? p : 0f;
 
   void Awake() {

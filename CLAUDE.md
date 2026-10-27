@@ -2,6 +2,14 @@
 
 Read `docs/` and `tasks.md` before starting a task.
 
+## Codebase map
+- `Assets/Scripts/`: runtime. `Go2Controller` / `MattController` / `G1Controller` (obs build, 50 Hz policy on `MjScene.ctrlCallback`), `PolicyRunner` (ONNX), `RaceOrchestrator` (1 racer) / `MultiRaceOrchestrator` (up to 4 in one MuJoCo model, tactics), `MapDefinition` + `CreatureDefinition` registries (`Assets/Resources/{Maps,Creatures}`). `Broadcast/`: spectator layer (director cams, strain, hazards/chat, predictions, weather, replay, telemetry, audio, VFX).
+- `Assets/Editor/`: CLI builders (`TrackBuilder`, `BroadcastBuilder`, `CreatureBuilder`, `MenuBuilder`, `BuildCli`, `WebGLBuild`). Scenes are composed by these, not by hand.
+- `Assets/MuJoCo/`: Unity-flattened MJCF (`training/flatten_for_unity.py`). `Assets/Policies/`: shipped ONNX.
+- `training/`: Docker trainer (`train.py --env ...`, `eval.py --rung ...`, `export_onnx.py`), Go2 envs in `go2/`, Matt in `matt/`, G1 in `g1/`. Runs land in `training/runs/` (gitignored). History and decisions: `rl_optimization_log.md`.
+- Gates: replay parity < 1e-4 (`ReplayHarness`), `NoPhysXTest`, headless race tests (`PoRace.exe -batchmode -nographics -raceTest`).
+- Proposals backlog: `docs/proposals_*.md`.
+
 ## Workflow
 - Work on `main` (this repo has no `master`). Stage and commit pending work before any git pull/sync.
 - Build watermark: show an automated `YYMMDD` build-date watermark in the bottom-right of the HUD.

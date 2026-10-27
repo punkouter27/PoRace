@@ -98,13 +98,13 @@ public unsafe class Go2Controller : MonoBehaviour, IParitySource, IRacer {
   readonly double[] _sens = new double[11];  // linvel 3, gyro 3, quat 4, upZ 1
   void OnPreStep(object sender, MjStepArgs a) {
     if (Model == null) return;
-    var d = a.data; var M = Model;
-    for (int i = 0; i < 3; i++) { _sens[i] = d->sensordata[M.LinvelAdr + i]; _sens[3 + i] = d->sensordata[M.GyroAdr + i]; }
-    for (int i = 0; i < 4; i++) _sens[6 + i] = d->sensordata[M.QuatAdr + i];
-    _sens[10] = d->sensordata[M.UpAdr + 2];
+    var M = Model;
+    RacerMath.Snapshot(a.data->sensordata, M.LinvelAdr, M.GyroAdr, M.QuatAdr, M.UpAdr, _sens);
   }
 
   void OnDestroy() {
+    // Dispose here, not in OnApplicationQuit: every scene load (menu, next autoplay race) destroys the controllers.
+    _loco?.Dispose(); _getup?.Dispose(); _loco = _getup = null;
     if (!MjScene.InstanceExists) return;
     MjScene.Instance.postInitEvent -= OnSceneInit;
     MjScene.Instance.preUpdateEvent -= OnPreStep;
@@ -113,20 +113,10 @@ public unsafe class Go2Controller : MonoBehaviour, IParitySource, IRacer {
 
   void Start() {
     var args = System.Environment.GetCommandLineArgs();  // headless harness: -command vx vy yaw  -mode HoldHome|Locomotion|Getup
-    for (int i = 0; i < args.Length; i++) {
-      if (args[i] == "-command" && i + 3 < args.Length)
-        command = new Vector3(float.Parse(args[i + 1], System.Globalization.CultureInfo.InvariantCulture),
-                              float.Parse(args[i + 2], System.Globalization.CultureInfo.InvariantCulture),
-                              float.Parse(args[i + 3], System.Globalization.CultureInfo.InvariantCulture));
-      if (args[i] == "-mode" && i + 1 < args.Length) mode = (Go2Mode)Enum.Parse(typeof(Go2Mode), args[i + 1]);
-    }
+    if (RacerMath.TryCommandArg(out var cmd)) command = cmd;
+    for (int i = 0; i + 1 < args.Length; i++) if (args[i] == "-mode") mode = (Go2Mode)Enum.Parse(typeof(Go2Mode), args[i + 1]);
     if (locomotionModel != null) _loco = new PolicyRunner(locomotionModel, ObsJoystick, Nu);
     if (getupModel != null) _getup = new PolicyRunner(getupModel, ObsGetup, Nu);
-  }
-
-  void OnApplicationQuit() {
-    _loco?.Dispose();
-    _getup?.Dispose();
   }
 
   void OnSceneInit(object sender, MjStepArgs a) {
@@ -154,8 +144,7 @@ public unsafe class Go2Controller : MonoBehaviour, IParitySource, IRacer {
     var M = Model;
     if (!multiRobot) MujocoLib.mj_resetData(m, d);  // single robot: full reset (also zeroes sim time, used by the parity harness)
     else { for (int i = 0; i < 6; i++) d->qvel[M.BaseDof + i] = 0; for (int i = 0; i < Nu; i++) d->qvel[M.JointDof[i]] = 0; }
-    d->qpos[M.BaseQpos] = spawnMj.x; d->qpos[M.BaseQpos + 1] = spawnMj.y; d->qpos[M.BaseQpos + 2] = spawnMj.z;
-    d->qpos[M.BaseQpos + 3] = Math.Cos(spawnYaw * 0.5); d->qpos[M.BaseQpos + 4] = 0; d->qpos[M.BaseQpos + 5] = 0; d->qpos[M.BaseQpos + 6] = Math.Sin(spawnYaw * 0.5);
+    RacerMath.Place(d->qpos, M.BaseQpos, spawnMj, spawnYaw);
     for (int i = 0; i < Nu; i++) { d->qpos[M.JointQpos[i]] = DefaultPose[i]; SetCtrl(d, i, DefaultPose[i]); }
     Array.Clear(_lastAction, 0, Nu);
     _cmd = Vector3.zero;
@@ -191,8 +180,7 @@ public unsafe class Go2Controller : MonoBehaviour, IParitySource, IRacer {
     var t0 = Time.realtimeSinceStartupAsDouble;
     switch (active) {
       case Go2Mode.Locomotion when _loco != null:
-        _cmd = new Vector3(Mathf.MoveTowards(_cmd.x, command.x, CmdSlewStep), Mathf.MoveTowards(_cmd.y, command.y, CmdSlewStep),
-                           Mathf.MoveTowards(_cmd.z, command.z, CmdSlewStep));
+        _cmd = RacerMath.Slew(_cmd, command, CmdSlewStep);
         BuildObs(d, withLinvelAndCommand: true);
         action = _loco.Run(_obs, ObsJoystick);
         for (int i = 0; i < Nu; i++) SetCtrl(d, i, DefaultPose[i] + ActionScale * Mathf.Clamp(action[i], -1f, 1f));
@@ -243,11 +231,7 @@ public unsafe class Go2Controller : MonoBehaviour, IParitySource, IRacer {
     int k = 0;
     if (withLinvelAndCommand) for (int i = 0; i < 3; i++) _obs[k++] = (float)_sens[i];
     for (int i = 0; i < 3; i++) _obs[k++] = (float)_sens[3 + i];
-    // Projected gravity: R_imu^T * (0,0,-1), from the imu site quaternion (w,x,y,z).
-    double w = _sens[6], x = _sens[7], y = _sens[8], z = _sens[9];
-    _obs[k++] = (float)(-2 * (x * z - w * y));
-    _obs[k++] = (float)(-2 * (y * z + w * x));
-    _obs[k++] = (float)(-(1 - 2 * (x * x + y * y)));
+    RacerMath.Gravity(_sens, _obs, ref k);  // projected gravity from the imu site quaternion
     for (int i = 0; i < Nu; i++) _obs[k++] = (float)(d->qpos[M.JointQpos[i]] - DefaultPose[i]);
     for (int i = 0; i < Nu; i++) _obs[k++] = (float)d->qvel[M.JointDof[i]];
     for (int i = 0; i < Nu; i++) _obs[k++] = _lastAction[i];

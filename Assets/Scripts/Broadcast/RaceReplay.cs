@@ -167,6 +167,8 @@ public unsafe class RaceReplay : MonoBehaviour {
       using (var rd = new BinaryReader(File.OpenRead(GhostPath))) {
         if (rd.ReadInt32() != 1) return null;
         var g = new GhostRun { time = rd.ReadSingle(), parts = rd.ReadInt32() }; int n = rd.ReadInt32();
+        // header 16 bytes, then n times and n * parts poses of 7 floats: anything else is a damaged or edited file
+        if (g.parts <= 0 || n < 0 || rd.BaseStream.Length != 16 + 4L * n * (1 + 7L * g.parts)) return null;
         for (int i = 0; i < n; i++) g.t.Add(rd.ReadSingle());
         for (int i = 0; i < n * g.parts * 7; i++) g.pose.Add(rd.ReadSingle());
         return g;

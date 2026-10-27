@@ -70,7 +70,6 @@ public unsafe class MultiRaceOrchestrator : MonoBehaviour {
   public readonly List<Func<Racer, string>> standingsExtras = new List<Func<Racer, string>>();
   public IReadOnlyList<Racer> Live => _live;
   public float TotalLength => _total;
-  public double SimTime => _sim;
   /// <summary>Seconds left in the countdown (0 once racing).</summary>
   public float CountdownLeft => Phase == RacePhase.Countdown ? Mathf.Max(0f, countdownSeconds - (float)(_sim - Math.Max(0, _t0))) : 0f;
 
@@ -91,6 +90,9 @@ public unsafe class MultiRaceOrchestrator : MonoBehaviour {
     int n = Mathf.Clamp(RaceConfig.fromMenu ? RaceConfig.racers : dogs, 1, dogs);
     bool matt = RaceConfig.fromMenu && RaceConfig.matt;
     int laps = RaceConfig.fromMenu ? RaceConfig.laps : 0; int seed = RaceConfig.fromMenu ? RaceConfig.seed : -1;
+    // Time.timeScale outlives scene loads: a load during an instant replay (0) or an INCIDENT slow motion (0.4) - the
+    // autoplay's next race, the Menu button - would otherwise freeze or slow the new race for good.
+    Time.timeScale = 1f;
     var args = Environment.GetCommandLineArgs();
     for (int i = 0; i < args.Length; i++) {
       if (args[i] == "-raceTest") _test = true;
@@ -192,8 +194,7 @@ public unsafe class MultiRaceOrchestrator : MonoBehaviour {
     foreach (var r in _live) {
       var c = r.Body;
       var pos = new Vector2((float)d->qpos[c.BaseQpos], (float)d->qpos[c.BaseQpos + 1]);
-      double qw = d->qpos[c.BaseQpos + 3], qx = d->qpos[c.BaseQpos + 4], qy = d->qpos[c.BaseQpos + 5], qz = d->qpos[c.BaseQpos + 6];
-      float yaw = (float)Math.Atan2(2 * (qw * qz + qx * qy), 1 - 2 * (qy * qy + qz * qz));
+      float yaw = (float)RacerMath.Yaw(d->qpos, c.BaseQpos);
       var was = r.state;
       r.state = r.autoReset != null ? r.autoReset.State : RaceState.RACING;
       if (Phase == RacePhase.Racing && r.finishTime < 0) {

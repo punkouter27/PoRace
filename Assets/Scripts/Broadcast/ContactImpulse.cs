@@ -42,7 +42,8 @@ public unsafe class ContactImpulse : MonoBehaviour {
   Dictionary<long, int> _seen = new Dictionary<long, int>(), _next = new Dictionary<long, int>();
   readonly Dictionary<Racer, float> _wear = new Dictionary<Racer, float>();
   readonly Dictionary<Racer, int> _slot = new Dictionary<Racer, int>();
-  readonly float[] _slip = new float[4 * 4]; readonly Vector3[] _slipPos = new Vector3[4 * 4], _slipN = new Vector3[4 * 4]; readonly Surface[] _slipSurf = new Surface[4 * 4];
+  // Per racer x 4 feet (a Go2 uses all four, Matt two), sized in Init: four dogs plus Matt is five racers.
+  float[] _slip = new float[0]; Vector3[] _slipPos, _slipN; Surface[] _slipSurf;
   int _step;
   readonly int[] _count = new int[4]; readonly float[] _sum = new float[4], _max = new float[4];
 
@@ -63,6 +64,8 @@ public unsafe class ContactImpulse : MonoBehaviour {
     _geomRacer = new Racer[n]; _geomFoot = new int[n]; _surface = new Surface[n]; _mass = new float[n]; _cube = new bool[n];
     var root = new Dictionary<int, Racer>(); var robotMass = new Dictionary<Racer, float>();
     for (int i = 0; i < race.Live.Count; i++) _slot[race.Live[i]] = i;
+    int slots = 4 * race.Live.Count;
+    _slip = new float[slots]; _slipPos = new Vector3[slots]; _slipN = new Vector3[slots]; _slipSurf = new Surface[slots];
     foreach (var r in race.Live) {
       var B = r.Body; if (B == null || !B.Ready) { _geomRacer = null; return; }
       root[B.BaseBody] = r; float mass = 0f;
@@ -155,7 +158,7 @@ public unsafe class ContactImpulse : MonoBehaviour {
     (_seen, _next) = (_next, _seen);
 
     if (!control || Slip == null) return;
-    for (int i = 0; i < race.Live.Count && i < 4; i++)
+    for (int i = 0; i < race.Live.Count; i++)
       for (int f = 0; f < 4; f++) { int s = i * 4 + f; if (_slip[s] > 0f) Slip(race.Live[i], f, _slip[s], _slipSurf[s], _slipPos[s], _slipN[s]); }
   }
 }

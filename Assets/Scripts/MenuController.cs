@@ -18,12 +18,11 @@ public class MenuController : MonoBehaviour {
     var a = Environment.GetCommandLineArgs();
     if (RaceConfig.autoplay && !Array.Exists(a, s => s == "-menuMap") && !Array.Exists(a, s => s == "-raceTest")) { RaceConfig.LaunchNextAutoplay(); return; }
     _racers = RaceConfig.fromMenu ? RaceConfig.racers : 4;
-    _weather = PlayerPrefs.GetInt("PoRace.weatherCity", 0);
+    _weather = PlayerPrefs.GetInt("PoRace.weatherCity", -1);
     _matt = PlayerPrefs.GetInt("PoRace.matt", 0) == 1;
     if (chatInput) chatInput.text = PlayerPrefs.GetString("PoRace.twitch", "");
     SelectMap(0);
-    var args = Environment.GetCommandLineArgs();
-    for (int i = 0; i + 1 < args.Length; i++) if (args[i] == "-menuMap") { SelectMap(int.Parse(args[i + 1])); Invoke(nameof(OnLaunch), 0.5f); }
+    for (int i = 0; i + 1 < a.Length; i++) if (a[i] == "-menuMap") { SelectMap(int.Parse(a[i + 1])); Invoke(nameof(OnLaunch), 0.5f); }
   }
 
   void SelectMap(int i) {

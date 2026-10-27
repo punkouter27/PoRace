@@ -58,9 +58,6 @@ public unsafe class CubePool : MonoBehaviour {
     var pos = BasePos(robot) - dir * 2f; pos.z += 0.2f;
     return Fire(pos, dir * speed);
   }
-
-  /// <summary>Cube index -> MuJoCo body id (for impact effects).</summary>
-  public int CubeBody(int k) => controller.Model.CubeBody[k];
 }
 
 }

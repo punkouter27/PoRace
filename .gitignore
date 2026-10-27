@@ -120,3 +120,6 @@ training/checkpoints/
 
 # WebGL build: Burst output Unity writes beside the project
 /Data/
+
+# Python bytecode
+__pycache__/

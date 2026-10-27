@@ -29,7 +29,6 @@ public unsafe class ExternalForces : MonoBehaviour {
   public void AddPush(int body, Vector3 force, int steps) { if (body >= 0 && steps > 0) _pushes.Add(new Push { body = body, force = force, steps = steps }); }
   /// <summary>Force held until changed (wind). Zero removes it.</summary>
   public void SetSteady(int body, Vector3 force) { if (force.sqrMagnitude < 1e-12f) _steady.Remove(body); else _steady[body] = force; }
-  public Vector3 Steady(int body) => _steady.TryGetValue(body, out var f) ? f : Vector3.zero;
 
   void OnPreStep(object sender, MjStepArgs a) {
     _sum.Clear(); _now.Clear();
