@@ -18,13 +18,14 @@ class Go2Env(mjx_env.MjxEnv):
   def __init__(self, config: config_dict.ConfigDict,
                config_overrides: Optional[Dict[str, Union[str, int, list[Any]]]] = None) -> None:
     super().__init__(config, config_overrides)
-    self._mj_model = mujoco.MjModel.from_xml_path(str(C.SCENE_XML))
+    scene = str(self._config.get("scene_xml", "") or C.SCENE_XML)   # steeplechase: assets/go2/scene_steeple.xml
+    self._mj_model = mujoco.MjModel.from_xml_path(scene)
     assert abs(self._mj_model.opt.timestep - self._config.sim_dt) < 1e-12, "sim_dt must equal the XML timestep"
     assert self._mj_model.nq == C.NQ and self._mj_model.nu == C.NU
     self._mj_model.vis.global_.offwidth = 1920
     self._mj_model.vis.global_.offheight = 1080
     self._mjx_model = mjx.put_model(self._mj_model, impl=self._config.impl)
-    self._xml_path = str(C.SCENE_XML)
+    self._xml_path = scene
     self._imu_site_id = self._mj_model.site(C.IMU_SITE).id
     self._feet_floor_found_sensor = [self._mj_model.sensor(s).id for s in C.FEET_CONTACT_SENSOR]
     self._cube_qpos_adr = [self._mj_model.jnt_qposadr[self._mj_model.body(b).jntadr[0]] for b in C.CUBE_BODIES]

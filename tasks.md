@@ -78,6 +78,19 @@ Mark `[x]` when done. Each task is one commit.
 - [x] F.8 Banked turns (15 degrees): tilted-gravity slope training (`--tilt_max 17`), `eval.py --rung bank`, Map 03 Banked Oval / `Track03.unity` (324 convex mesh-geom pieces, rails on the surface), `go2_loco_bank.onnx` (r7 @ 29.5M) on Track03 only. Headless seeds 1-5: 20/20 finish, 0 un-sticks/respawns/flips. Known gap: bank eval 6/10, all failures are uphill starts from standstill at 1.5 m/s.
 - [ ] F.9 Faster dog (commands above 1.5 m/s): attempt 2 (`runs/r5`, speed-scaled sigma) froze again; see log 2026-10-26.
 
+## Phase G: Broadcast layer (spectator features), `Assets/Scripts/Broadcast/`, `BroadcastBuilder` adds it to every race scene
+- [x] G.0 Desktop players drew nothing (URP SSAO resources missing in builds; PC renderer only): `RenderFix.RemoveSsao`. `BuildCli` (batch builds with the editor closed), `ShotProbe` (`-shots`), YYMMDD build watermark (`BuildStamp` / `BuildInfo`).
+- [x] G.1 Redline strain: `RaceSensors` (effort = |actuator_force| / 24, power, foot strikes, cube impacts) + `StrainMonitor` (leg tint, standings marks, REDLINING event).
+- [x] G.2 `RaceDirector`: event-scored cuts (PACK / LEADER / BATTLE / TRACKSIDE / OVERHEAD / INCIDENT + slow motion / FINISH), manual with C or a tap.
+- [x] G.3 Tactics in `MultiRaceOrchestrator`: pass slower or fallen racers, block attackers, small vy (<= 0.25) toward the chosen line; banked sections are a no-manoeuvre zone. `IntentArrows` + PASS / AVOID / BLOCK tags. `-noTactics` reproduces the old races bit for bit.
+- [x] G.4 `ExternalForces`: single writer of base xfrc_applied (shoves + wind). `HazardDesk` + `ChatLink` (anonymous Twitch IRC, `-twitch`, `-chatScript`): !drop / !cube / !shove with cooldowns, impulse capped at 30 N.s.
+- [x] G.5 `Predictions`: odds from speed draw + win record, 10 s betting countdown, points wallet, chat !bet, live win %.
+- [x] G.6 `TrackWeather`: Open-Meteo current weather at 7 circuits (menu) or `-weather` offline; rain -> world-geom friction x0.7..1 (inside training DR), wind -> steady base force <= 10 N; rain particles.
+- [x] G.7 `RaceReplay`: 8 s qpos ring buffer, paused kinematic replay with mjData snapshot/restore; time-trial ghost (best run per map, persistentDataPath).
+- [x] G.8 `RaceTelemetry`: 10 Hz JSONL + summary (CoT, cadence, peak effort, falls, passes), stats card, optional Azure Table upload (`-azureTableSas` / `PORACE_AZURE_TABLE_SAS`; not exercised against a real account).
+- [x] G.9 `RaceAudio`: synthesised footsteps / servo whine / impacts / crowd / countdown beeps, dust particles, camera shake.
+- [ ] G.10 Steeplechase (E.3 without the height scan): Map 04 `Track04.unity` (34 MuJoCo box obstacles, Blender visuals from `tools/blender/steeple_props.py`), `train.py --steeple`, `eval.py --rung steeple`. s1 failed (creep, then freeze); s2 adds a progress reward. Done when a policy passes the 90/100 gate and Track04 races finish.
+
 ## Phase E: Later (tracked, not scheduled)
 - [x] E.1 Android: `tools/android/build_mujoco_android.sh` -> `Assets/Plugins/Android/arm64-v8a/libmujoco.so` (MuJoCo 3.15.0, API 28, 16 KB pages). Pixel 9 Pro: ModelCheck OK x4, 60 fps, 0.40 ms inference. Min SDK 28.
 - [ ] E.2 CreatureDefinition / MapDefinition registries and pre-race menu (PRD FR-01..03).

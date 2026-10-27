@@ -25,6 +25,11 @@ public class Racer {
   [NonSerialized] public RaceState state;
   [NonSerialized] public bool active = true;
   [NonSerialized] public float stuckFor; [NonSerialized] public int unsticks;
+  // Tactics (lane choice): offset is added to the racer's racing-line lane; intent is what the HUD arrow shows.
+  [NonSerialized] public float lateral, offset, aggression;
+  [NonSerialized] public string intent = "";
+  [NonSerialized] public Racer passing;          // racer this one is trying to get past (null = none)
+  [NonSerialized] public int falls, overtakes;
 }
 
 /// <summary>
@@ -32,7 +37,7 @@ public class Racer {
 /// of the validated locomotion + getup policies. Racers bump through solver contact only. Steering is the joystick
 /// command: vx = cruise, yaw rate toward a look-ahead point on the racer's lane of the map centerline.
 /// Lane draw and speed variation are random per race (seeded). MuJoCo frame: x, y on the ground, z up.
-/// Headless: PoRace.exe -batchmode -nographics -raceTest [-timeScale 4] [-seed 7] [-racers 4] [-laps 2] [-raceFlipAt 20]
+/// Headless: PoRace.exe -batchmode -nographics -raceTest [-timeScale 4] [-seed 7] [-racers 4] [-laps 2] [-raceFlipAt 20] [-noTactics]
 /// </summary>
 public unsafe class MultiRaceOrchestrator : MonoBehaviour {
   public MapDefinition map;
@@ -44,6 +49,25 @@ public unsafe class MultiRaceOrchestrator : MonoBehaviour {
   [Tooltip("Each race draws a cruise speed in [1 - speedSpread, 1] x the racer's cruiseSpeed.")]
   public float speedSpread = 0.06f;
   public bool randomizeGrid = true;
+
+  [Tooltip("Lane choice: pass slower or fallen racers ahead, block a racer attacking from behind. Off = fixed lanes.")]
+  public bool tactics = true;
+  [Tooltip("Max lateral command (m/s, body frame) used to move between lines; the policy was trained on |vy| <= 0.8.")]
+  public float maxLateralCmd = 0.25f;
+
+  // Race events for the broadcast layer (director, replay, audio, predictions, telemetry), raised from the physics
+  // step (FixedUpdate, main thread).
+  public event Action<Racer, Racer> Overtook;   // (passer, passed)
+  public event Action<Racer> Fell, Recovered, Finished;
+  public event Action<RacePhase> PhaseChanged;
+  public event Action Restarted;
+  /// <summary>Extra text appended to each standings row (strain marks, live win chance).</summary>
+  public readonly List<Func<Racer, string>> standingsExtras = new List<Func<Racer, string>>();
+  public IReadOnlyList<Racer> Live => _live;
+  public float TotalLength => _total;
+  public double SimTime => _sim;
+  /// <summary>Seconds left in the countdown (0 once racing).</summary>
+  public float CountdownLeft => Phase == RacePhase.Countdown ? Mathf.Max(0f, countdownSeconds - (float)(_sim - Math.Max(0, _t0))) : 0f;
 
   public RacePhase Phase { get; private set; } = RacePhase.Countdown;
   public double RaceTime { get; private set; }
@@ -63,6 +87,7 @@ public unsafe class MultiRaceOrchestrator : MonoBehaviour {
     var args = Environment.GetCommandLineArgs();
     for (int i = 0; i < args.Length; i++) {
       if (args[i] == "-raceTest") _test = true;
+      if (args[i] == "-noTactics") tactics = false;   // fixed lanes, as before tactics existed (regression runs)
       if (i + 1 >= args.Length) continue;
       if (args[i] == "-timeScale") Time.timeScale = float.Parse(args[i + 1], CultureInfo.InvariantCulture);
       if (args[i] == "-raceFlipAt") _flipAt = double.Parse(args[i + 1], CultureInfo.InvariantCulture);
@@ -95,15 +120,21 @@ public unsafe class MultiRaceOrchestrator : MonoBehaviour {
       r.lane = lanes[i];
       r.speed = r.cruiseSpeed * (1f - speedSpread * (float)rng.NextDouble());
       r.distance = 0; r.segment = 0; r.lap = 0; r.checkpoint = 0; r.finishTime = -1; r.place = 0; r.stuckFor = 0; r.unsticks = 0;
+      r.offset = 0; r.lateral = r.lane; r.intent = ""; r.passing = null; r.falls = 0; r.overtakes = 0; r.state = RaceState.RACING;
       Spawn(r, 0f);
     }
+    // Drawn after the grid so the lane / speed draw of a seed stays exactly as before.
+    foreach (var r in _live) r.aggression = (float)rng.NextDouble();
+    _ahead.Clear();
   }
 
   void Spawn(Racer r, float s) {
     var p = map.LanePoint(s, r.lane, out var t);
     // On a bank the uphill feet of a level-spawned dog would start inside the surface: lift by the slope over the stance.
     float lateral = Vector2.Dot(p - map.PointAt(s, out _), MapDefinition.Left(t)), bank = Mathf.Abs(map.BankAt(s)) * Mathf.Deg2Rad;
-    r.controller.spawnMj = new Vector3(p.x, p.y, Go2Controller.HomeHeight + map.SurfaceHeight(s, lateral) + 0.2f * Mathf.Tan(bank));
+    // Obstacles (steeplechase): spawn 10 cm above the tallest block under the stance and drop onto it, as in training.
+    float block = map.ObstacleHeightAt(p, 0.45f); if (block > 0f) block += 0.1f;
+    r.controller.spawnMj = new Vector3(p.x, p.y, Go2Controller.HomeHeight + map.SurfaceHeight(s, lateral) + 0.2f * Mathf.Tan(bank) + block);
     r.controller.spawnYaw = Mathf.Atan2(t.y, t.x);
   }
 
@@ -112,6 +143,7 @@ public unsafe class MultiRaceOrchestrator : MonoBehaviour {
     Seed = (Seed * 1103515245 + 12345) & 0xFFFF;   // a new draw each restart
     Draw();
     foreach (var r in _live) { r.controller.mode = Go2Mode.Locomotion; r.controller.command = Vector3.zero; r.controller.ResetToHome(); }
+    Restarted?.Invoke(); PhaseChanged?.Invoke(Phase);
   }
 
   /// <summary>Advance the racer's segment so its projection stays inside it; returns metres raced including laps.</summary>
@@ -137,7 +169,7 @@ public unsafe class MultiRaceOrchestrator : MonoBehaviour {
     if (t > 1.0) { _stepMs += ms; _steps++; if (ms > _maxMs) _maxMs = ms; }
     if (_t0 < 0) _t0 = t;
 
-    if (Phase == RacePhase.Countdown && t - _t0 >= countdownSeconds) { Phase = RacePhase.Racing; _raceStart = t; }
+    if (Phase == RacePhase.Countdown && t - _t0 >= countdownSeconds) { Phase = RacePhase.Racing; _raceStart = t; PhaseChanged?.Invoke(Phase); }
     if (Phase == RacePhase.Racing) RaceTime = t - _raceStart;
     if (Phase == RacePhase.Racing && _flipAt >= 0 && RaceTime >= _flipAt) { _flipAt = -1; Leader().controller.KnockOver(); _flips++; }
 
@@ -146,18 +178,32 @@ public unsafe class MultiRaceOrchestrator : MonoBehaviour {
       var pos = new Vector2((float)d->qpos[M.BaseQpos], (float)d->qpos[M.BaseQpos + 1]);
       double qw = d->qpos[M.BaseQpos + 3], qx = d->qpos[M.BaseQpos + 4], qy = d->qpos[M.BaseQpos + 5], qz = d->qpos[M.BaseQpos + 6];
       float yaw = (float)Math.Atan2(2 * (qw * qz + qx * qy), 1 - 2 * (qy * qy + qz * qz));
+      var was = r.state;
       r.state = r.autoReset != null ? r.autoReset.State : RaceState.RACING;
+      if (Phase == RacePhase.Racing && r.finishTime < 0) {
+        if (r.state == RaceState.FALLEN_RECOVERING && was != RaceState.FALLEN_RECOVERING) { r.falls++; Fell?.Invoke(r); }
+        if (r.state == RaceState.RACING && was == RaceState.FALLEN_RECOVERING) Recovered?.Invoke(r);
+      }
       if (Phase == RacePhase.Countdown || r.finishTime >= 0) { c.command = Vector3.zero; continue; }
 
       float dist = Progress(r, pos, out float lateral);
-      r.distance = Mathf.Min(dist, _total);
-      if (dist >= _total) { r.finishTime = RaceTime; r.place = ++_finished; c.command = Vector3.zero; continue; }
+      r.distance = Mathf.Min(dist, _total); r.lateral = lateral;
+      if (dist >= _total) { r.finishTime = RaceTime; r.place = ++_finished; c.command = Vector3.zero; Finished?.Invoke(r); continue; }
       int cp = Mathf.FloorToInt(dist / map.checkpointSpacing);
       if (cp > r.checkpoint) { r.checkpoint = cp; Spawn(r, cp * map.checkpointSpacing); }
 
-      var target = map.LanePoint(dist + map.lookAhead, r.lane, out _);
+      // Lane choice: the racing line (lane x the map's squeeze) plus this racer's tactical offset, slewed at 0.6 m/s.
+      // Banked sections are a no-manoeuvre zone: the slope policy's weak spot is restarting uphill from a standstill
+      // (rl_optimization_log.md, F.8), and sideways moves on the bank caused exactly that (Banked Oval seed 2 DNF).
+      float line = LineAt(r, dist); bool banked = Mathf.Abs(map.BankAt(dist)) > 0.5f || Mathf.Abs(map.BankAt(dist + map.lookAhead)) > 0.5f;
+      if (tactics) r.offset = Mathf.MoveTowards(r.offset, banked ? 0f : Tactic(r, line) - line, 0.6f * Go2Controller.SimDt);
+      if (banked) { r.intent = ""; r.passing = null; }
+      var target = map.LanePoint(dist + map.lookAhead, r.lane, out var tanAhead) + MapDefinition.Left(tanAhead) * r.offset;
       float err = Mathf.DeltaAngle(yaw * Mathf.Rad2Deg, Mathf.Atan2(target.y - pos.y, target.x - pos.x) * Mathf.Rad2Deg) * Mathf.Deg2Rad;
-      c.command = new Vector3(r.speed * Mathf.Max(0.3f, Mathf.Cos(err)), 0f, Mathf.Clamp(steerGain * err, -1.2f, 1.2f));
+      // Small sideways step toward the chosen line (body frame ~ track frame while the heading error is small).
+      float latErr = line + r.offset - lateral;
+      float latCmd = tactics && !banked && Mathf.Abs(latErr) > 0.1f && Mathf.Abs(err) < 0.5f ? Mathf.Clamp(latErr, -maxLateralCmd, maxLateralCmd) : 0f;
+      c.command = new Vector3(r.speed * Mathf.Max(0.3f, Mathf.Cos(err)), latCmd, Mathf.Clamp(steerGain * err, -1.2f, 1.2f));
       // Un-stick: upright, asked to go fast, but (nearly) stopped for half a second -> restart the command ramp.
       float vx = (float)d->qvel[M.BaseDof], vy = (float)d->qvel[M.BaseDof + 1];
       bool stuck = c.Active == Go2Mode.Locomotion && c.FilteredCommand.x > 1.0f && vx * vx + vy * vy < 0.3f * 0.3f;
@@ -165,7 +211,8 @@ public unsafe class MultiRaceOrchestrator : MonoBehaviour {
       if (r.stuckFor > 0.5f) { c.RestartCommandRamp(); r.stuckFor = 0f; r.unsticks++; }
       if (Mathf.Abs(lateral) > map.halfWidth + 1f) c.ResetToHome();   // left the track: back to the last checkpoint
     }
-    if (Phase == RacePhase.Racing && _finished == _live.Count) Phase = RacePhase.Finished;
+    if (Phase == RacePhase.Racing) DetectOvertakes();
+    if (Phase == RacePhase.Racing && _finished == _live.Count) { Phase = RacePhase.Finished; PhaseChanged?.Invoke(Phase); }
 
     // Robot-vs-robot contacts this step (bump mechanics are pure solver contact; this only counts them).
     if (Phase == RacePhase.Racing) {
@@ -181,11 +228,77 @@ public unsafe class MultiRaceOrchestrator : MonoBehaviour {
       _testDone = true;
       bool ok = Phase == RacePhase.Finished;
       Debug.Log($"[Race4] {(ok ? "FINISHED" : "DNF")} map={map.displayName} laps={Laps} length={_total:F1}m seed={Seed} | " + string.Join(" | ", Standings().Select(r =>
-          $"{r.name} {(r.finishTime >= 0 ? r.finishTime.ToString("F2", CultureInfo.InvariantCulture) + "s" : "DNF@" + r.distance.ToString("F0") + "m")} lane={r.lane:F1} v={r.speed:F2} resets={(r.autoReset != null ? r.autoReset.Resets : 0)} unstuck={r.unsticks}"))
+          $"{r.name} {(r.finishTime >= 0 ? r.finishTime.ToString("F2", CultureInfo.InvariantCulture) + "s" : "DNF@" + r.distance.ToString("F0") + "m")} lane={r.lane:F1} v={r.speed:F2} resets={(r.autoReset != null ? r.autoReset.Resets : 0)} unstuck={r.unsticks} falls={r.falls} passes={r.overtakes}"))
           + $" | flips={_flips} bumps={Bumps} bumpTime={BumpSteps * Go2Controller.SimDt:F2}s");
       double mean = _steps > 0 ? _stepMs / _steps : 0;
       Debug.Log($"[Perf4] {_live.Count} racers: physics step mean {mean:F4} ms max {_maxMs:F3} ms | per 50 Hz control step {mean * Go2Controller.Decimation:F3} ms (budget 5.0)");
       Application.Quit(ok ? 0 : 1);
+    }
+  }
+
+  /// <summary>Lateral position of the racer's racing line at arc length s (lane x the lap's squeeze).</summary>
+  float LineAt(Racer r, float s) {
+    float u = map.closed ? Mathf.Repeat(s, map.Length) / map.Length : Mathf.Clamp01(s / map.Length);
+    return r.lane * map.laneScale.Evaluate(u);
+  }
+
+  const float PassGap = 0.65f, Margin = 0.45f;
+
+  /// <summary>Where this racer wants to be across the track (lateral, + left). Pass a slower or fallen racer that is
+  /// up to 2.5 m (5 m if it is down) ahead and in the way, on the side with more room; an aggressive racer with an
+  /// attacker within 1.5 m behind moves across to cover that line. Otherwise hold the racing line.</summary>
+  float Tactic(Racer r, float line) {
+    float edge = map.halfWidth - Margin, me = line + r.offset;
+    if (r.state != RaceState.RACING) { r.intent = ""; r.passing = null; return me; }   // no manoeuvres while stumbling
+    Racer block = null; float bestGap = float.MaxValue;
+    foreach (var o in _live) {
+      if (o == r || o.finishTime >= 0) continue;
+      float ds = o.distance - r.distance; bool down = o.state != RaceState.RACING;
+      if (ds <= 0f || ds > (down ? 5f : 2.5f) || Mathf.Abs(o.lateral - me) > (down ? 0.8f : 0.55f)) continue;
+      if ((down || o.speed < r.speed - 0.01f) && ds < bestGap) { bestGap = ds; block = o; }
+    }
+    if (block != null) {
+      float gap = block.state != RaceState.RACING ? 0.85f : PassGap;
+      float left = block.lateral + gap, right = block.lateral - gap;
+      float roomL = left <= edge ? Room(r, left) : -1f, roomR = right >= -edge ? Room(r, right) : -1f;
+      if (roomL >= 0f || roomR >= 0f) {
+        bool goLeft = roomL > roomR || (Mathf.Approximately(roomL, roomR) && me >= block.lateral);
+        r.passing = block; r.intent = block.state != RaceState.RACING ? "AVOID" : goLeft ? "PASS L" : "PASS R";
+        return goLeft ? left : right;
+      }
+    }
+    r.passing = null;
+    if (r.aggression > 0.5f) {
+      foreach (var p in _live) {
+        if (p == r || p.passing != r) continue;
+        float behind = r.distance - p.distance;
+        if (behind > 0f && behind < 1.5f) { r.intent = "BLOCK"; return Mathf.Clamp(Mathf.Lerp(line, p.lateral, 0.4f), -edge, edge); }
+      }
+    }
+    r.intent = "";
+    return line;
+  }
+
+  /// <summary>Clearance (m) at a candidate lateral position from the nearest other racer within 3 m along the track.</summary>
+  float Room(Racer r, float lat) {
+    float best = 5f;
+    foreach (var o in _live) if (o != r && o.finishTime < 0 && Mathf.Abs(o.distance - r.distance) < 3f) best = Mathf.Min(best, Mathf.Abs(o.lateral - lat));
+    return best;
+  }
+
+  // Pairwise "who is ahead" with 0.25 m hysteresis, so two racers side by side do not fire overtakes every step.
+  readonly Dictionary<(Racer, Racer), int> _ahead = new Dictionary<(Racer, Racer), int>();
+  void DetectOvertakes() {
+    for (int i = 0; i < _live.Count; i++) for (int j = i + 1; j < _live.Count; j++) {
+      Racer a = _live[i], b = _live[j];
+      if (a.finishTime >= 0 || b.finishTime >= 0) continue;
+      float d = a.distance - b.distance; int now = d > 0.25f ? 1 : d < -0.25f ? -1 : 0;
+      if (now == 0) continue;
+      if (_ahead.TryGetValue((a, b), out int before) && before != now) {
+        var passer = now > 0 ? a : b; var passed = now > 0 ? b : a; passer.overtakes++;
+        Overtook?.Invoke(passer, passed);
+      }
+      _ahead[(a, b)] = now;
     }
   }
 
@@ -223,7 +336,9 @@ public unsafe class MultiRaceOrchestrator : MonoBehaviour {
         var r = order[i];
         string st = r.finishTime >= 0 ? r.finishTime.ToString("F2", CultureInfo.InvariantCulture) + " s"
                   : (map.closed ? $"L{Mathf.Min(r.lap + 1, Laps)}/{Laps}  " : "") + $"{r.distance:F0} m" + (r.state == RaceState.RACING ? "" : r.state == RaceState.STUMBLE ? "  stumble" : "  DOWN");
-        sb.Append($"{i + 1}. <color=#{ColorUtility.ToHtmlStringRGB(r.color)}>{r.name}</color>  {st}\n");
+        sb.Append($"{i + 1}. <color=#{ColorUtility.ToHtmlStringRGB(r.color)}>{r.name}</color>  {st}");
+        foreach (var extra in standingsExtras) sb.Append(extra(r));
+        sb.Append('\n');
       }
       sb.Append($"<size=18>{map.displayName}   bumps {Bumps}</size>");
       standingsText.text = sb.ToString();

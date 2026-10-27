@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PoRace UI Changes</title>
+<style>
+  :root { --bg: #f6f7f9; --card: #fff; --ink: #1d2330; --muted: #5d6675; --line: #dde1e7; --pin: #e0352b; --pin-ink: #fff; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #12151b; --card: #1b2029; --ink: #e8ebf0; --muted: #9aa3b2; --line: #2c3340; } }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 1180px; margin: 0 auto; padding: 24px 16px 64px; }
+  h1 { font-size: 26px; margin: 0 0 4px; }
+  h2 { font-size: 19px; margin: 36px 0 6px; }
+  p.lede { color: var(--muted); margin: 0 0 18px; }
+  .pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; align-items: start; }
+  figure { margin: 0; background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 10px; }
+  figcaption { font-weight: 600; font-size: 13px; color: var(--muted); margin-bottom: 6px; text-transform: uppercase; letter-spacing: .04em; }
+  .shot { position: relative; }
+  .shot img { display: block; width: 100%; border-radius: 6px; }
+  .pin { position: absolute; transform: translate(-50%, -50%); width: 24px; height: 24px; border-radius: 50%; background: var(--pin); color: var(--pin-ink);
+         font: 700 13px/24px system-ui, sans-serif; text-align: center; box-shadow: 0 0 0 2px #fff, 0 2px 6px rgba(0,0,0,.5); }
+  ol.notes { margin: 10px 0 0; padding-left: 0; list-style: none; counter-reset: n; }
+  ol.notes li { counter-increment: n; position: relative; padding-left: 32px; margin: 6px 0; }
+  ol.notes li::before { content: counter(n); position: absolute; left: 0; top: 1px; width: 22px; height: 22px; border-radius: 50%; background: var(--pin); color: var(--pin-ink);
+                        font: 700 12px/22px system-ui, sans-serif; text-align: center; }
+  .solo { max-width: 420px; }
+  table { border-collapse: collapse; width: 100%; background: var(--card); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; font-size: 14px; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; }
+  code { font-size: 13px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>PoRace UI changes: broadcast layer</h1>
+  <p class="lede">Build 261026, Windows player at 540 × 960 (portrait). Before = build from the previous commit (with the SSAO render fix so it draws at all);
+    after = this change. Red numbers mark what changed; the list under each pair explains them.</p>
+
+  <h2>1. Pre-race menu</h2>
+  <div class="pair">
+    <figure><figcaption>Before</figcaption><div class="shot"><img src="before/oval_00_0.3s.png" alt="Menu before"></div></figure>
+    <figure><figcaption>After</figcaption><div class="shot"><img src="after_final/oval_00_0.3s.png" alt="Menu after">
+      <span class="pin" style="left:50%;top:62%">1</span><span class="pin" style="left:50%;top:75%">2</span><span class="pin" style="left:84%;top:97.5%">3</span></div></figure>
+  </div>
+  <ol class="notes">
+    <li>Track weather picker: live conditions from one of seven real circuits (Open-Meteo), or off. Remembered between sessions.</li>
+    <li>Optional Twitch channel: chat drives hazards (!drop / !cube / !shove) and bets (!bet). Read-only, no login.</li>
+    <li>Build watermark: version plus YYMMDD build date, bottom-right (also on every race HUD).</li>
+  </ol>
+
+  <h2>2. Countdown: predictions and conditions</h2>
+  <div class="pair">
+    <figure><figcaption>Before (3 s countdown)</figcaption><div class="shot"><img src="before/oval_01_2s.png" alt="Countdown before"></div></figure>
+    <figure><figcaption>After (10 s countdown in interactive play)</figcaption><div class="shot"><img src="after_final/oval_02_13s.png" alt="Countdown after">
+      <span class="pin" style="left:50%;top:51.5%">1</span><span class="pin" style="left:36%;top:9%">2</span><span class="pin" style="left:93%;top:19%">3</span>
+      <span class="pin" style="left:50%;top:27%">4</span><span class="pin" style="left:30%;top:82.5%">5</span></div></figure>
+  </div>
+  <ol class="notes">
+    <li>Pick-the-winner panel: odds from this race's speed draw and each racer's win record, tap (or keys 1–4) to stake 100 points, chat split from !bet.</li>
+    <li>Strain marks per racer, one per leg (FL FR RL RR), green → yellow → red with joint effort against the 24 N·m limit.</li>
+    <li>Live weather widget: circuit, temperature, rain, wind arrow, and the grip the track now has. Rain also draws a particle curtain and dims the sun.</li>
+    <li>Race clock moved down from the top centre so the wider standings rows never run into it.</li>
+    <li>Director lower third: current camera and its subject; tap to switch auto / manual.</li>
+  </ol>
+
+  <h2>3. Racing</h2>
+  <div class="pair">
+    <figure><figcaption>Before</figcaption><div class="shot"><img src="before/oval_02_15s.png" alt="Racing before"></div></figure>
+    <figure><figcaption>After</figcaption><div class="shot"><img src="after_final/oval_04_24s.png" alt="Racing after">
+      <span class="pin" style="left:36%;top:6.5%">1</span><span class="pin" style="left:42%;top:82.5%">2</span><span class="pin" style="left:62%;top:94%">3</span>
+      <span class="pin" style="left:49%;top:48%">4</span><span class="pin" style="left:52%;top:72%">5</span></div></figure>
+  </div>
+  <ol class="notes">
+    <li>Live win chance per racer, from remaining distance, speed and whether it is down.</li>
+    <li>Automatic director: LEADER, PACK, TRACKSIDE, BATTLE, OVERHEAD, INCIDENT, FINISH shots chosen from race events.</li>
+    <li>Ticker: viewer hazards, weather, form guide, redlines, bet results.</li>
+    <li>Intent arrows: where each racer is steering (racing line plus its tactical offset).</li>
+    <li>Dust from foot strikes (and footstep / servo sounds, not visible here).</li>
+  </ol>
+
+  <h2>4. Tactics, incident replay, finish</h2>
+  <div class="pair">
+    <figure><figcaption>Battle shot with a pass in progress</figcaption><div class="shot"><img src="after_final/oval_06_45s.png" alt="Battle">
+      <span class="pin" style="left:24%;top:32.5%">1</span><span class="pin" style="left:48%;top:82.5%">2</span></div></figure>
+    <figure><figcaption>Instant replay after a fall</figcaption><div class="shot"><img src="after_final/sprint_01_41.2s.png" alt="Replay">
+      <span class="pin" style="left:50%;top:33%">3</span><span class="pin" style="left:42%;top:2.5%">4</span></div></figure>
+    <figure><figcaption>Post-race stats card</figcaption><div class="shot"><img src="after_final/sprint_04_112s.png" alt="Stats">
+      <span class="pin" style="left:50%;top:44%">5</span></div></figure>
+  </div>
+  <ol class="notes">
+    <li>Intent tag over a racer while it passes (PASS L / PASS R), avoids a fallen racer (AVOID) or covers an attacker (BLOCK).</li>
+    <li>BATTLE: side-on shot of the two racers involved in an overtake.</li>
+    <li>REPLAY banner. The race is paused, the last 5 s play back at 0.6× from an orbiting camera, then the race resumes exactly where it stopped.</li>
+    <li>Physics really is paused during the replay (sim 0 Hz).</li>
+    <li>Stats card: time, average and top speed, cost of transport, cadence, peak joint effort, falls and passes. The same numbers go to a JSONL log and, if configured, Azure Table Storage.</li>
+  </ol>
+
+  <h2>5. New map: Steeplechase</h2>
+  <div class="pair">
+    <figure class="solo"><figcaption>Map 04, hurdles from headless Blender</figcaption><div class="shot"><img src="after_final/steeple_03_24s.png" alt="Steeplechase">
+      <span class="pin" style="left:52%;top:50%">1</span><span class="pin" style="left:62%;top:39.5%">2</span></div></figure>
+  </div>
+  <ol class="notes">
+    <li>Hurdles 3–8 cm high, striped beams modelled in Blender (<code>tools/blender/steeple_props.py</code>); collision is plain MuJoCo boxes.</li>
+    <li>Steps (yellow-edged slabs) and a rubble field further down the 100 m course.</li>
+  </ol>
+
+  <h2>Where things moved</h2>
+  <table>
+    <tr><th>Element</th><th>Before</th><th>After</th></tr>
+    <tr><td>Race clock</td><td>Top centre, under telemetry</td><td>Lower (y −300 on the 720 × 1280 canvas), clear of standings and weather</td></tr>
+    <tr><td>Standings rows</td><td>Place, name, lap, distance</td><td>+ live win chance, + four strain marks, + RED when redlining</td></tr>
+    <tr><td>Bottom-right text</td><td><code>v0.1.0</code></td><td><code>v0.1.0  261026</code> (build date watermark)</td></tr>
+    <tr><td>Right column</td><td>Mode / state, Flip, Menu</td><td>+ live weather block under Menu</td></tr>
+    <tr><td>Bottom, right of buttons</td><td>Empty</td><td>Director label and ticker</td></tr>
+    <tr><td>Countdown</td><td>3 s</td><td>10 s in interactive play (betting window); headless tests keep 3 s</td></tr>
+  </table>
+</main>
+</body>
+</html>

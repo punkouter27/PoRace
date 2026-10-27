@@ -1,0 +1,202 @@
+<!--
+  PoRace training/parity scene: Go2 + flat floor + 4 pooled projectile cubes.
+  Cubes park on the floor far from the origin (x=20+2k, y=20) and are fired by writing qpos/qvel.
+  qpos layout: [0:19] robot (7 free + 12 joints), then 7 per cube in order cube0..cube3.
+  Keyframe "home" lives here because nq includes the cubes.
+  Unity cannot read <include>; training/flatten_for_unity.py emits the flat go2_unity.xml.
+-->
+<mujoco model="go2 porace steeple scene">
+  <include file="go2_porace.xml"/>
+
+  <statistic center="0 0 0.1" extent="0.8" meansize="0.04"/>
+
+  <visual>
+    <headlight diffuse=".8 .8 .8" ambient=".2 .2 .2" specular="1 1 1"/>
+    <global azimuth="120" elevation="-20"/>
+    <quality shadowsize="8192"/>
+  </visual>
+
+  <asset>
+    <texture type="skybox" builtin="gradient" rgb1="1 1 1" rgb2="1 1 1" width="800" height="800"/>
+    <texture type="2d" name="groundplane" builtin="checker" mark="edge" rgb1="1 1 1" rgb2="1 1 1" markrgb="0 0 0"
+      width="300" height="300"/>
+    <material name="groundplane" texture="groundplane" texuniform="true" texrepeat="5 5" reflectance="0"/>
+    <material name="cube" rgba="0.9 0.3 0.1 1"/>
+    <material name="obstacle" rgba="0.2 0.5 0.8 1"/>
+  </asset>
+
+  <default>
+    <default class="cube">
+      <geom type="box" size="0.05 0.05 0.05" mass="1" friction="0.6" condim="3" contype="1" conaffinity="1"
+        material="cube"/>
+    </default>
+  </default>
+
+  <worldbody>
+    <geom name="floor" size="0 0 0.01" type="plane" material="groundplane" priority="1" friction="0.6" condim="3"
+      contype="1" conaffinity="0"/>
+    <geom name="obs0_hurdle" type="box" pos="3.8349 -6.4460 0.0297" euler="0 0 0.1287" size="0.0406 1.3600 0.0297" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs1_hurdle" type="box" pos="2.9858 6.4259 0.0114" euler="0 0 1.7078" size="0.0727 1.3619 0.0114" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs2_hurdle" type="box" pos="10.0073 -13.0596 0.0285" euler="0 0 2.2923" size="0.0461 1.3974 0.0285" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs3_hurdle" type="box" pos="-5.6081 -2.1648 0.0212" euler="0 0 0.0890" size="0.0443 1.2530 0.0212" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs4_hurdle" type="box" pos="3.2308 -3.2570 0.0181" euler="0 0 3.1328" size="0.0743 1.2642 0.0181" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs5_hurdle" type="box" pos="5.2765 -3.1102 0.0156" euler="0 0 0.4244" size="0.0653 1.1440 0.0156" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs6_hurdle" type="box" pos="-0.3966 10.9057 0.0230" euler="0 0 2.9344" size="0.0525 1.1786 0.0230" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs7_hurdle" type="box" pos="2.6404 -4.5385 0.0191" euler="0 0 1.2303" size="0.0712 0.9204 0.0191" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs8_hurdle" type="box" pos="-11.6476 9.3140 0.0165" euler="0 0 2.4727" size="0.0484 1.4074 0.0165" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs9_hurdle" type="box" pos="-4.5887 -9.7922 0.0163" euler="0 0 1.4148" size="0.0679 0.9230 0.0163" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs10_hurdle" type="box" pos="-2.6725 -8.4416 0.0281" euler="0 0 0.2851" size="0.0603 0.9740 0.0281" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs11_hurdle" type="box" pos="-8.4136 12.3792 0.0382" euler="0 0 1.1470" size="0.0437 1.2218 0.0382" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs12_hurdle" type="box" pos="-1.6694 12.7285 0.0399" euler="0 0 1.5705" size="0.0549 1.2152 0.0399" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs13_hurdle" type="box" pos="12.5704 -1.1187 0.0346" euler="0 0 2.3805" size="0.0574 1.1470 0.0346" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs14_hurdle" type="box" pos="-2.3896 6.5655 0.0249" euler="0 0 2.2341" size="0.0726 0.8362 0.0249" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs15_hurdle" type="box" pos="11.9679 13.1019 0.0389" euler="0 0 0.0462" size="0.0702 1.4859 0.0389" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs16_hurdle" type="box" pos="-9.8346 13.2336 0.0208" euler="0 0 2.7958" size="0.0688 1.1100 0.0208" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs17_hurdle" type="box" pos="8.4527 11.8588 0.0383" euler="0 0 0.8361" size="0.0589 1.0821 0.0383" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs18_hurdle" type="box" pos="-12.8657 6.4962 0.0154" euler="0 0 1.9301" size="0.0410 1.2894 0.0154" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs19_hurdle" type="box" pos="7.2226 0.3572 0.0128" euler="0 0 2.9189" size="0.0423 1.3810 0.0128" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs20_hurdle" type="box" pos="-4.3593 -1.9516 0.0124" euler="0 0 3.0350" size="0.0597 0.9441 0.0124" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs21_hurdle" type="box" pos="10.8673 -7.6757 0.0289" euler="0 0 0.3913" size="0.0501 1.1896 0.0289" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs22_hurdle" type="box" pos="8.6719 1.6933 0.0270" euler="0 0 0.9061" size="0.0545 1.3636 0.0270" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs23_hurdle" type="box" pos="12.8542 -3.6567 0.0186" euler="0 0 1.7361" size="0.0608 1.3862 0.0186" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs24_hurdle" type="box" pos="-2.6177 11.4789 0.0357" euler="0 0 0.1353" size="0.0688 1.0615 0.0357" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs25_hurdle" type="box" pos="-13.7213 -3.7787 0.0326" euler="0 0 0.2470" size="0.0628 0.9554 0.0326" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs26_hurdle" type="box" pos="12.4264 -10.4491 0.0257" euler="0 0 2.7168" size="0.0421 1.0356 0.0257" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs27_hurdle" type="box" pos="-0.3122 13.3409 0.0366" euler="0 0 2.4369" size="0.0508 0.9524 0.0366" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs28_hurdle" type="box" pos="10.6766 0.2998 0.0196" euler="0 0 1.0816" size="0.0748 0.9870 0.0196" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs29_hurdle" type="box" pos="10.6427 8.7454 0.0337" euler="0 0 2.0982" size="0.0735 1.4443 0.0337" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs30_hurdle" type="box" pos="10.0996 -7.0799 0.0192" euler="0 0 0.4437" size="0.0635 1.2860 0.0192" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs31_hurdle" type="box" pos="-2.9244 11.4872 0.0282" euler="0 0 1.7637" size="0.0602 0.8956 0.0282" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs32_hurdle" type="box" pos="0.6562 -11.5098 0.0343" euler="0 0 3.0849" size="0.0600 0.7548 0.0343" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs33_hurdle" type="box" pos="13.3914 2.5164 0.0199" euler="0 0 1.0043" size="0.0466 1.2544 0.0199" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs34_hurdle" type="box" pos="2.1753 2.8627 0.0170" euler="0 0 3.0235" size="0.0425 1.1250 0.0170" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs35_hurdle" type="box" pos="-9.0377 -3.1341 0.0232" euler="0 0 0.1976" size="0.0654 0.8158 0.0232" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs36_hurdle" type="box" pos="10.4586 -0.7756 0.0182" euler="0 0 2.8671" size="0.0668 1.4365 0.0182" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs37_hurdle" type="box" pos="-11.9402 -12.0309 0.0191" euler="0 0 2.7296" size="0.0622 1.1224 0.0191" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs38_hurdle" type="box" pos="4.8645 -5.0955 0.0262" euler="0 0 2.2333" size="0.0561 1.1306 0.0262" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs39_hurdle" type="box" pos="-11.4031 2.2052 0.0397" euler="0 0 0.6196" size="0.0683 1.1166 0.0397" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs40_step" type="box" pos="-8.8776 12.9645 0.0301" euler="0 0 2.5162" size="0.8091 1.0915 0.0301" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs41_step" type="box" pos="4.3434 11.5833 0.0231" euler="0 0 0.2051" size="1.1097 0.7245 0.0231" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs42_step" type="box" pos="13.8327 7.8733 0.0172" euler="0 0 1.5254" size="0.7592 1.1459 0.0172" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs43_step" type="box" pos="5.8357 8.0963 0.0199" euler="0 0 2.5107" size="0.6739 1.0771 0.0199" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs44_step" type="box" pos="-3.8554 -2.3115 0.0086" euler="0 0 1.7009" size="0.4957 0.7459 0.0086" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs45_step" type="box" pos="6.8427 9.8525 0.0395" euler="0 0 0.4365" size="0.9982 1.0979 0.0395" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs46_step" type="box" pos="9.6261 -2.1250 0.0323" euler="0 0 3.0778" size="1.2279 0.8281 0.0323" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs47_step" type="box" pos="11.5875 -0.6679 0.0342" euler="0 0 2.7137" size="0.9963 0.6498 0.0342" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs48_step" type="box" pos="1.9792 -11.3723 0.0257" euler="0 0 1.2296" size="0.4627 0.8047 0.0257" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs49_step" type="box" pos="-2.1354 2.4164 0.0171" euler="0 0 0.3854" size="1.1937 0.9814 0.0171" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs50_step" type="box" pos="11.1104 2.3330 0.0356" euler="0 0 0.1263" size="1.0048 0.8837 0.0356" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs51_step" type="box" pos="0.9005 8.7708 0.0218" euler="0 0 3.1322" size="0.6980 0.5454 0.0218" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs52_step" type="box" pos="7.0854 -1.7016 0.0170" euler="0 0 1.8485" size="0.5083 1.0172 0.0170" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs53_step" type="box" pos="-8.6627 10.1626 0.0172" euler="0 0 1.7732" size="0.8118 1.1640 0.0172" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs54_step" type="box" pos="5.4923 -4.8165 0.0179" euler="0 0 0.5511" size="0.9736 0.7084 0.0179" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs55_step" type="box" pos="12.4230 -8.4196 0.0371" euler="0 0 1.6090" size="0.4204 0.5389 0.0371" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs56_step" type="box" pos="8.0989 1.5914 0.0276" euler="0 0 0.6989" size="0.8741 0.4103 0.0276" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs57_step" type="box" pos="6.0690 4.0893 0.0227" euler="0 0 1.9206" size="0.4627 0.6094 0.0227" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs58_step" type="box" pos="-2.9628 13.7767 0.0324" euler="0 0 2.9020" size="0.5292 0.9015 0.0324" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs59_step" type="box" pos="-10.1768 -5.2473 0.0210" euler="0 0 2.2491" size="1.1659 0.6905 0.0210" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs60_step" type="box" pos="9.0102 2.3795 0.0141" euler="0 0 1.4972" size="0.6177 0.4618 0.0141" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs61_step" type="box" pos="2.2392 -8.6489 0.0221" euler="0 0 3.0647" size="0.4914 0.7843 0.0221" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs62_step" type="box" pos="-7.4953 6.9652 0.0234" euler="0 0 2.0223" size="1.0169 0.4704 0.0234" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs63_step" type="box" pos="0.5553 -2.0518 0.0077" euler="0 0 0.1276" size="0.5649 1.2033 0.0077" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs64_step" type="box" pos="9.8575 9.0198 0.0320" euler="0 0 1.2293" size="0.7968 1.1004 0.0320" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs65_step" type="box" pos="9.4344 7.2127 0.0195" euler="0 0 2.1717" size="1.1760 1.0994 0.0195" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs66_step" type="box" pos="6.9503 -11.5729 0.0384" euler="0 0 1.3379" size="0.7372 0.5718 0.0384" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs67_step" type="box" pos="-11.3463 -13.8628 0.0358" euler="0 0 1.0145" size="1.2421 0.6250 0.0358" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs68_step" type="box" pos="-9.1528 2.4186 0.0272" euler="0 0 3.0109" size="1.0090 1.2334 0.0272" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs69_step" type="box" pos="13.5334 9.4373 0.0239" euler="0 0 2.4449" size="1.1552 0.9368 0.0239" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs70_rubble" type="box" pos="-7.6580 7.7712 0.0180" euler="0 0 0.5343" size="0.1028 0.1092 0.0180" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs71_rubble" type="box" pos="7.2936 -10.9248 0.0192" euler="0 0 1.9633" size="0.1172 0.1091 0.0192" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs72_rubble" type="box" pos="2.3934 6.5208 0.0107" euler="0 0 1.6337" size="0.1194 0.1159 0.0107" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs73_rubble" type="box" pos="5.4685 5.4799 0.0161" euler="0 0 0.6141" size="0.0729 0.1004 0.0161" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs74_rubble" type="box" pos="9.5529 -0.3774 0.0115" euler="0 0 1.4952" size="0.1031 0.0832 0.0115" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs75_rubble" type="box" pos="9.6351 4.9784 0.0185" euler="0 0 1.1587" size="0.1212 0.1285 0.0185" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs76_rubble" type="box" pos="-3.1451 -9.3861 0.0103" euler="0 0 2.7550" size="0.1437 0.1890 0.0103" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs77_rubble" type="box" pos="3.8159 8.0877 0.0105" euler="0 0 1.9060" size="0.0698 0.0526 0.0105" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs78_rubble" type="box" pos="8.8343 -7.9221 0.0129" euler="0 0 0.2360" size="0.1006 0.1047 0.0129" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs79_rubble" type="box" pos="7.6514 8.9943 0.0142" euler="0 0 1.2514" size="0.0567 0.0474 0.0142" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs80_rubble" type="box" pos="2.1534 0.7790 0.0083" euler="0 0 1.1164" size="0.0861 0.0956 0.0083" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs81_rubble" type="box" pos="-3.1557 3.4693 0.0085" euler="0 0 1.8595" size="0.1058 0.0923 0.0085" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs82_rubble" type="box" pos="3.1456 3.1024 0.0140" euler="0 0 1.2027" size="0.1046 0.1101 0.0140" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs83_rubble" type="box" pos="9.6044 -11.7229 0.0139" euler="0 0 2.7496" size="0.0928 0.1256 0.0139" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs84_rubble" type="box" pos="-0.4758 -8.8841 0.0216" euler="0 0 3.0525" size="0.0512 0.0675 0.0216" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs85_rubble" type="box" pos="0.4245 9.3161 0.0220" euler="0 0 2.0494" size="0.1104 0.0882 0.0220" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs86_rubble" type="box" pos="7.6596 0.0263 0.0148" euler="0 0 0.5760" size="0.0940 0.0786 0.0148" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs87_rubble" type="box" pos="-13.6153 -1.8510 0.0149" euler="0 0 2.3945" size="0.0643 0.0702 0.0149" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs88_rubble" type="box" pos="-0.4336 13.9860 0.0139" euler="0 0 2.4380" size="0.1217 0.1539 0.0139" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs89_rubble" type="box" pos="-8.4195 -1.8966 0.0188" euler="0 0 1.6090" size="0.0652 0.0493 0.0188" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs90_rubble" type="box" pos="-5.1519 0.2258 0.0076" euler="0 0 1.8673" size="0.1368 0.1612 0.0076" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs91_rubble" type="box" pos="6.4598 1.9094 0.0118" euler="0 0 2.8273" size="0.0781 0.0748 0.0118" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs92_rubble" type="box" pos="-7.5216 4.2215 0.0122" euler="0 0 0.8315" size="0.0807 0.1040 0.0122" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs93_rubble" type="box" pos="1.9092 3.5968 0.0066" euler="0 0 2.8130" size="0.1173 0.0864 0.0066" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs94_rubble" type="box" pos="-11.8597 0.9585 0.0103" euler="0 0 0.5207" size="0.0622 0.0775 0.0103" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs95_rubble" type="box" pos="-0.7503 -7.9372 0.0117" euler="0 0 1.1181" size="0.0875 0.0681 0.0117" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs96_rubble" type="box" pos="-2.3191 -3.1958 0.0106" euler="0 0 1.9201" size="0.1427 0.1614 0.0106" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs97_rubble" type="box" pos="2.2933 6.6059 0.0090" euler="0 0 2.4994" size="0.0585 0.0626 0.0090" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs98_rubble" type="box" pos="-4.9545 11.9716 0.0169" euler="0 0 1.4848" size="0.0584 0.0768 0.0169" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs99_rubble" type="box" pos="-0.4164 5.8437 0.0093" euler="0 0 0.9964" size="0.1255 0.1647 0.0093" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs100_rubble" type="box" pos="6.1926 4.9449 0.0153" euler="0 0 2.0637" size="0.0506 0.0582 0.0153" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs101_rubble" type="box" pos="4.7377 -13.8152 0.0157" euler="0 0 0.5744" size="0.0615 0.0576 0.0157" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs102_rubble" type="box" pos="-2.0452 3.4613 0.0072" euler="0 0 1.1858" size="0.0619 0.0722 0.0072" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs103_rubble" type="box" pos="6.9692 4.7244 0.0170" euler="0 0 1.3489" size="0.0644 0.0457 0.0170" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs104_rubble" type="box" pos="-9.4096 5.3004 0.0213" euler="0 0 1.1173" size="0.1250 0.1665 0.0213" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs105_rubble" type="box" pos="12.2647 -13.2935 0.0210" euler="0 0 0.5806" size="0.0774 0.0614 0.0210" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs106_rubble" type="box" pos="-0.9975 -7.7691 0.0111" euler="0 0 2.3765" size="0.1026 0.0712 0.0111" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs107_rubble" type="box" pos="-1.3707 10.5509 0.0128" euler="0 0 1.8902" size="0.1306 0.1609 0.0128" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs108_rubble" type="box" pos="-3.4522 -0.1624 0.0063" euler="0 0 1.4843" size="0.0816 0.1027 0.0063" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs109_rubble" type="box" pos="10.8933 -11.8855 0.0160" euler="0 0 0.0295" size="0.1351 0.1127 0.0160" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs110_rubble" type="box" pos="-12.0006 7.8765 0.0155" euler="0 0 1.4936" size="0.1470 0.1035 0.0155" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs111_rubble" type="box" pos="-7.1800 -5.7578 0.0153" euler="0 0 1.3192" size="0.0881 0.1207 0.0153" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs112_rubble" type="box" pos="-13.1451 -12.1489 0.0133" euler="0 0 0.0874" size="0.1450 0.1643 0.0133" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs113_rubble" type="box" pos="8.2703 -4.7092 0.0159" euler="0 0 0.7718" size="0.1076 0.1271 0.0159" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs114_rubble" type="box" pos="-11.5515 6.6407 0.0177" euler="0 0 2.7031" size="0.0649 0.0852 0.0177" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs115_rubble" type="box" pos="-7.6816 -1.3013 0.0114" euler="0 0 2.6762" size="0.0653 0.0732 0.0114" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs116_rubble" type="box" pos="-1.8077 13.5174 0.0102" euler="0 0 1.3469" size="0.1256 0.1595 0.0102" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs117_rubble" type="box" pos="-2.8426 -0.0277 0.0059" euler="0 0 0.6246" size="0.1218 0.1637 0.0059" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs118_rubble" type="box" pos="2.7257 10.0364 0.0177" euler="0 0 1.4661" size="0.1062 0.1342 0.0177" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs119_rubble" type="box" pos="6.0650 11.5389 0.0118" euler="0 0 2.9605" size="0.1456 0.1808 0.0118" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs120_rubble" type="box" pos="3.2548 -6.4062 0.0164" euler="0 0 1.2100" size="0.0624 0.0461 0.0164" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs121_rubble" type="box" pos="-10.2815 0.4714 0.0167" euler="0 0 1.2410" size="0.1354 0.1669 0.0167" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs122_rubble" type="box" pos="1.8509 13.3909 0.0162" euler="0 0 1.3183" size="0.1231 0.1711 0.0162" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs123_rubble" type="box" pos="7.8983 -6.3919 0.0127" euler="0 0 1.7774" size="0.0683 0.0762 0.0127" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs124_rubble" type="box" pos="13.6369 8.8869 0.0139" euler="0 0 0.3886" size="0.0534 0.0683 0.0139" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs125_rubble" type="box" pos="7.6333 7.2061 0.0212" euler="0 0 2.6577" size="0.0747 0.0530 0.0212" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs126_rubble" type="box" pos="-4.8753 6.5605 0.0103" euler="0 0 2.6551" size="0.0970 0.0832 0.0103" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs127_rubble" type="box" pos="11.7373 -5.8844 0.0237" euler="0 0 2.5586" size="0.1492 0.1002 0.0237" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs128_rubble" type="box" pos="-8.4878 -5.7208 0.0206" euler="0 0 1.8710" size="0.1275 0.1128 0.0206" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs129_rubble" type="box" pos="-8.2032 3.0831 0.0109" euler="0 0 0.0442" size="0.1092 0.0753 0.0109" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs130_rubble" type="box" pos="-13.6665 12.0374 0.0156" euler="0 0 0.7524" size="0.0854 0.0697 0.0156" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs131_rubble" type="box" pos="-4.1491 -1.9283 0.0089" euler="0 0 0.9378" size="0.1441 0.1990 0.0089" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs132_rubble" type="box" pos="4.4235 6.0649 0.0127" euler="0 0 1.1694" size="0.0584 0.0449 0.0127" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs133_rubble" type="box" pos="13.8684 10.0362 0.0203" euler="0 0 1.9506" size="0.0939 0.0709 0.0203" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs134_rubble" type="box" pos="-11.8891 -3.3744 0.0198" euler="0 0 1.0268" size="0.1259 0.1330 0.0198" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs135_rubble" type="box" pos="-0.8495 13.7807 0.0150" euler="0 0 0.0498" size="0.0681 0.0611 0.0150" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs136_rubble" type="box" pos="10.3374 -1.7275 0.0163" euler="0 0 2.7743" size="0.0906 0.0960 0.0163" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs137_rubble" type="box" pos="9.0612 4.0376 0.0114" euler="0 0 0.6667" size="0.0752 0.0530 0.0114" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs138_rubble" type="box" pos="-2.7050 8.9686 0.0096" euler="0 0 2.8129" size="0.1409 0.1101 0.0096" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+    <geom name="obs139_rubble" type="box" pos="7.6434 -13.5684 0.0215" euler="0 0 1.7723" size="0.0680 0.0512 0.0215" material="obstacle" priority="1" friction="0.6" condim="3" contype="1" conaffinity="0"/>
+
+    <body name="cube0" pos="20 20 0.05"><freejoint name="cube0_joint"/><geom name="cube0_geom" class="cube"/></body>
+    <body name="cube1" pos="22 20 0.05"><freejoint name="cube1_joint"/><geom name="cube1_geom" class="cube"/></body>
+    <body name="cube2" pos="24 20 0.05"><freejoint name="cube2_joint"/><geom name="cube2_geom" class="cube"/></body>
+    <body name="cube3" pos="26 20 0.05"><freejoint name="cube3_joint"/><geom name="cube3_geom" class="cube"/></body>
+  </worldbody>
+
+  <sensor>
+    <contact name="FL_floor_found" geom1="FL" body2="world" reduce="mindist" num="1" data="found"/>
+    <contact name="FR_floor_found" geom1="FR" body2="world" reduce="mindist" num="1" data="found"/>
+    <contact name="RL_floor_found" geom1="RL" body2="world" reduce="mindist" num="1" data="found"/>
+    <contact name="RR_floor_found" geom1="RR" body2="world" reduce="mindist" num="1" data="found"/>
+  </sensor>
+
+  <keyframe>
+    <key name="home"
+      qpos="0 0 0.27 1 0 0 0
+            0 0.9 -1.8  0 0.9 -1.8  0 0.9 -1.8  0 0.9 -1.8
+            20 20 0.05 1 0 0 0
+            22 20 0.05 1 0 0 0
+            24 20 0.05 1 0 0 0
+            26 20 0.05 1 0 0 0"
+      ctrl="0 0.9 -1.8 0 0.9 -1.8 0 0.9 -1.8 0 0.9 -1.8"/>
+  </keyframe>
+</mujoco>

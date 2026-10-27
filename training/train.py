@@ -44,7 +44,7 @@ ENVS = {"joystick": (joystick.Joystick, joystick.default_config, "Go1JoystickFla
 CONTACTS_PER_ENV = 30  # full-collision Go2 lying on the floor; fewer drops contacts and bodies sink
 
 
-def make_env(name, pert=False, cubes=False, num_worlds=8192, kick_max=None, vx_max=None, tilt_max=None):
+def make_env(name, pert=False, cubes=False, num_worlds=8192, kick_max=None, vx_max=None, tilt_max=None, steeple=False):
   cls, cfg_fn, _ = ENVS[name]
   cfg = cfg_fn()
   # naconmax is a TOTAL across worlds. Size it to the worlds this env instance really runs, otherwise the
@@ -67,6 +67,11 @@ def make_env(name, pert=False, cubes=False, num_worlds=8192, kick_max=None, vx_m
     # Slopes up to tilt_max degrees in any direction (banked turns are ~15 degrees of cross-slope).
     if tilt_max is not None:
       cfg.tilt_config.enable = True; cfg.tilt_config.max_deg = float(tilt_max)
+    # Obstacle field (make_steeple.py): blind policy, same 48-dim obs. s1 (swing target 0.12, no progress term)
+    # learned to creep and then to stand still; s2 keeps the 0.10 swing target and adds the progress reward.
+    if steeple:
+      cfg.scene_xml = str(joystick.C.ASSET_PATH / "scene_steeple.xml"); cfg.terrain_config.enable = True
+      cfg.reward_config.scales.progress = 1.0
   return cls(config=cfg), cfg
 
 
@@ -82,14 +87,15 @@ def main():
   ap.add_argument("--vx_max", type=float, default=None, help="max forward command in m/s (default 1.5)")
   ap.add_argument("--tilt_max", type=float, default=None, help="train on slopes up to this many degrees (tilted gravity)")
   ap.add_argument("--kick_max", type=float, default=None, help="max velocity kick in m/s (impulse = 0.318*mass*kick)")
+  ap.add_argument("--steeple", action="store_true", help="obstacle field scene (make_steeple.py)")
   ap.add_argument("--pert", action="store_true"); ap.add_argument("--cubes", action="store_true"); ap.add_argument("--dr", action="store_true")
   a = ap.parse_args()
 
   ppo_params = locomotion_params.brax_ppo_config(ENVS[a.env][2])
   if a.timesteps is not None: ppo_params.num_timesteps = a.timesteps
   if a.num_envs is not None: ppo_params.num_envs = a.num_envs
-  env, cfg = make_env(a.env, a.pert, a.cubes, num_worlds=ppo_params.num_envs, kick_max=a.kick_max, vx_max=a.vx_max, tilt_max=a.tilt_max)
-  eval_env, _ = make_env(a.env, a.pert, a.cubes, num_worlds=ppo_params.get("num_eval_envs", 128), kick_max=a.kick_max, vx_max=a.vx_max, tilt_max=a.tilt_max)
+  env, cfg = make_env(a.env, a.pert, a.cubes, num_worlds=ppo_params.num_envs, kick_max=a.kick_max, vx_max=a.vx_max, tilt_max=a.tilt_max, steeple=a.steeple)
+  eval_env, _ = make_env(a.env, a.pert, a.cubes, num_worlds=ppo_params.get("num_eval_envs", 128), kick_max=a.kick_max, vx_max=a.vx_max, tilt_max=a.tilt_max, steeple=a.steeple)
   logdir = Path(a.logdir or f"runs/{a.env}-{time.strftime('%Y%m%d-%H%M%S')}").resolve()
   ckpt = logdir / "checkpoints"; ckpt.mkdir(parents=True, exist_ok=True)
   (ckpt / "config.json").write_text(json.dumps(cfg.to_dict(), indent=1, default=str))

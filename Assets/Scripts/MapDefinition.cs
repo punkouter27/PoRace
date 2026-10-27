@@ -29,6 +29,22 @@ public class MapDefinition : ScriptableObject {
            "(a left-hand turn), pivoting on the left edge so that edge stays flush with the floor. 0 = flat.")]
   public AnimationCurve bankDeg = AnimationCurve.Constant(0f, 1f, 0f);
 
+  [Tooltip("Static obstacle boxes on the track (steeplechase). Heights must stay inside the trained bands of " +
+           "training/make_steeple.py: hurdles and steps 3-8 cm, rubble 2-5 cm.")]
+  public List<Obstacle> obstacles = new List<Obstacle>();
+
+  /// <summary>Height of the tallest obstacle within `radius` of a MuJoCo-plane point (0 when clear). Used to lift
+  /// respawns above blocks.</summary>
+  public float ObstacleHeightAt(Vector2 p, float radius) {
+    float h = 0f;
+    foreach (var o in obstacles) {
+      var c = o.Center(this, out var along);
+      var d = p - c; var across = Left(along);
+      if (Mathf.Abs(Vector2.Dot(d, along)) <= o.along * 0.5f + radius && Mathf.Abs(Vector2.Dot(d, across)) <= o.across * 0.5f + radius) h = Mathf.Max(h, o.height);
+    }
+    return h;
+  }
+
   /// <summary>Half-width of the banked surface: a little wider than the track so the rails stand on it.</summary>
   public float BankHalfWidth => halfWidth + 0.15f;
 
@@ -102,6 +118,22 @@ public class MapDefinition : ScriptableObject {
   }
 }
 
+/// <summary>An obstacle box placed in the track frame: centre at arc length s and lateral offset (+ left), sized
+/// along x across x height (m), rotated by yaw degrees from the track direction. Sits on the floor.</summary>
+[System.Serializable]
+public struct Obstacle {
+  public string kind;          // hurdle | step | rubble
+  public float s, lateral, along, across, height, yaw;
+
+  /// <summary>Centre in the MuJoCo plane and the obstacle's own "along" axis.</summary>
+  public Vector2 Center(MapDefinition map, out Vector2 alongAxis) {
+    var p = map.PointAt(s, out var t);
+    float a = yaw * Mathf.Deg2Rad;
+    alongAxis = new Vector2(t.x * Mathf.Cos(a) - t.y * Mathf.Sin(a), t.x * Mathf.Sin(a) + t.y * Mathf.Cos(a));
+    return p + MapDefinition.Left(t) * lateral;
+  }
+}
+
 /// <summary>Runtime discovery of every map asset under Resources/Maps (PRD FR-03).</summary>
 public static class MapRegistry {
   public static MapDefinition[] All() {
@@ -117,6 +149,8 @@ public static class RaceConfig {
   public static int laps = 0;        // 0 = the map's default
   public static int seed = -1;       // -1 = different every race
   public static bool fromMenu = false;
+  public static string twitchChannel = "";   // live chat hazards / bets (anonymous read-only IRC); "" = off
+  public static int weatherCity = 0;         // index into TrackWeather.Cities; -1 = off
 }
 
 }

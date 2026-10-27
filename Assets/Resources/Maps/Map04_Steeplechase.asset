@@ -1,0 +1,315 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a4e361d1c7b73c747b2bd923c71256ad, type: 3}
+  m_Name: Map04_Steeplechase
+  m_EditorClassIdentifier: PoRace::PoRace.MapDefinition
+  displayName: Steeplechase
+  sceneName: Track04
+  terrain: obstacles
+  difficulty: 4
+  closed: 0
+  defaultLaps: 1
+  halfWidth: 1.65
+  gridSlots: 4
+  laneSpacing: 0.8
+  checkpointSpacing: 25
+  lookAhead: 4
+  centerline:
+  - {x: 0, y: 0}
+  - {x: 100, y: 0}
+  laneScale:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 1
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  bankDeg:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 1
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  obstacles:
+  - kind: hurdle
+    s: 14
+    lateral: 0
+    along: 0.12
+    across: 3.18
+    height: 0.03
+    yaw: 0
+  - kind: hurdle
+    s: 20
+    lateral: 0
+    along: 0.12
+    across: 3.18
+    height: 0.045
+    yaw: 0
+  - kind: hurdle
+    s: 26
+    lateral: 0
+    along: 0.12
+    across: 3.18
+    height: 0.06
+    yaw: 0
+  - kind: step
+    s: 36
+    lateral: 0
+    along: 4
+    across: 3.18
+    height: 0.05
+    yaw: 0
+  - kind: hurdle
+    s: 44
+    lateral: 0
+    along: 0.14
+    across: 3.18
+    height: 0.07
+    yaw: 0
+  - kind: rubble
+    s: 61.892
+    lateral: 0.17912902
+    along: 0.25055113
+    across: 0.23289889
+    height: 0.020359283
+    yaw: 9.805684
+  - kind: rubble
+    s: 55.386986
+    lateral: -0.07723364
+    along: 0.23172061
+    across: 0.2778254
+    height: 0.02716485
+    yaw: 106.23104
+  - kind: rubble
+    s: 56.606396
+    lateral: 0.7897084
+    along: 0.18119413
+    across: 0.18531819
+    height: 0.036314193
+    yaw: 85.56199
+  - kind: rubble
+    s: 60.360935
+    lateral: -0.42450783
+    along: 0.24567403
+    across: 0.31041378
+    height: 0.040037666
+    yaw: 77.401566
+  - kind: rubble
+    s: 51.188194
+    lateral: -0.35538018
+    along: 0.13471437
+    across: 0.098724306
+    height: 0.03955002
+    yaw: 54.4587
+  - kind: rubble
+    s: 56.083454
+    lateral: 1.1358696
+    along: 0.22621368
+    across: 0.15180318
+    height: 0.021182358
+    yaw: 168.53682
+  - kind: rubble
+    s: 51.283997
+    lateral: -1.3211814
+    along: 0.17500664
+    across: 0.13701865
+    height: 0.03727739
+    yaw: 148.90822
+  - kind: rubble
+    s: 58.71329
+    lateral: -1.3550828
+    along: 0.18520711
+    across: 0.158141
+    height: 0.04094137
+    yaw: 93.57703
+  - kind: rubble
+    s: 58.99991
+    lateral: 1.0494142
+    along: 0.20601597
+    across: 0.20956418
+    height: 0.03580581
+    yaw: 54.517624
+  - kind: rubble
+    s: 61.83855
+    lateral: -0.49538267
+    along: 0.2793331
+    across: 0.19753678
+    height: 0.02959904
+    yaw: 164.3328
+  - kind: rubble
+    s: 56.38642
+    lateral: 0.8322946
+    along: 0.22902359
+    across: 0.16853723
+    height: 0.022546198
+    yaw: 131.7373
+  - kind: rubble
+    s: 53.523643
+    lateral: 0.031138767
+    along: 0.22952075
+    across: 0.29300126
+    height: 0.02553977
+    yaw: 78.6252
+  - kind: rubble
+    s: 56.68154
+    lateral: -0.5950047
+    along: 0.19155118
+    across: 0.19478798
+    height: 0.03265562
+    yaw: 169.52666
+  - kind: rubble
+    s: 59.295673
+    lateral: -0.27728257
+    along: 0.1862347
+    across: 0.2388581
+    height: 0.038853567
+    yaw: 162.30153
+  - kind: rubble
+    s: 51.707684
+    lateral: 1.3442634
+    along: 0.1884412
+    across: 0.20393741
+    height: 0.022789825
+    yaw: 9.5158825
+  - kind: rubble
+    s: 52.517906
+    lateral: 0.80368876
+    along: 0.21811809
+    across: 0.1509708
+    height: 0.0364181
+    yaw: 7.8680267
+  - kind: rubble
+    s: 52.852116
+    lateral: 0.3954557
+    along: 0.12480316
+    across: 0.103253946
+    height: 0.03898462
+    yaw: 72.79356
+  - kind: rubble
+    s: 58.30252
+    lateral: 0.18293285
+    along: 0.121400215
+    across: 0.115377225
+    height: 0.022230012
+    yaw: 174.61172
+  - kind: rubble
+    s: 55.696518
+    lateral: 0.18113732
+    along: 0.12246038
+    across: 0.11082791
+    height: 0.04159997
+    yaw: 98.15914
+  - kind: rubble
+    s: 59.938297
+    lateral: 1.1304985
+    along: 0.2019183
+    across: 0.26581705
+    height: 0.042263318
+    yaw: 169.66196
+  - kind: rubble
+    s: 50.980553
+    lateral: -0.8382
+    along: 0.24028477
+    across: 0.23226023
+    height: 0.02697455
+    yaw: 175.47003
+  - kind: rubble
+    s: 53.984066
+    lateral: -1.3733293
+    along: 0.22396399
+    across: 0.17805801
+    height: 0.034733072
+    yaw: 33.152
+  - kind: rubble
+    s: 51.557587
+    lateral: -1.002907
+    along: 0.16809289
+    across: 0.23486772
+    height: 0.045333643
+    yaw: 168.58357
+  - kind: rubble
+    s: 61.87728
+    lateral: -1.2096752
+    along: 0.17381473
+    across: 0.10568338
+    height: 0.03762244
+    yaw: 111.29117
+  - kind: step
+    s: 69
+    lateral: 0
+    along: 4
+    across: 3.18
+    height: 0.04
+    yaw: 0
+  - kind: step
+    s: 69.5
+    lateral: 0
+    along: 2
+    across: 3.18
+    height: 0.08
+    yaw: 0
+  - kind: hurdle
+    s: 80
+    lateral: 0
+    along: 0.12
+    across: 3.18
+    height: 0.05
+    yaw: 0
+  - kind: hurdle
+    s: 85
+    lateral: 0
+    along: 0.12
+    across: 3.18
+    height: 0.065
+    yaw: 0
+  - kind: hurdle
+    s: 90
+    lateral: 0
+    along: 0.15
+    across: 3.18
+    height: 0.08
+    yaw: 0

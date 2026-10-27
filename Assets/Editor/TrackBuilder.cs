@@ -57,11 +57,42 @@ public static class TrackBuilder {
     b.bankDeg = Linear(lap, (0, 0), (t1 - 4, 0), (t1, Bank), (t1 + turn, Bank), (t1 + turn + 4, 0),
                             (t2 - 4, 0), (t2, Bank), (t2 + turn, Bank), (t2 + turn + 4, 0), (lap, 0));
     EditorUtility.SetDirty(b);
+
+    var st = MapAsset("Map04_Steeplechase");
+    st.displayName = "Steeplechase"; st.sceneName = "Track04"; st.terrain = "obstacles"; st.difficulty = 4; st.closed = false; st.defaultLaps = 1;
+    st.halfWidth = 1.65f; st.gridSlots = 4; st.laneSpacing = 0.8f; st.checkpointSpacing = 25f; st.lookAhead = 4f;
+    st.centerline = new List<Vector2> { new Vector2(0, 0), new Vector2(100, 0) };
+    st.laneScale = AnimationCurve.Constant(0f, 1f, 1f);
+    st.obstacles = SteepleCourse(st.halfWidth);
+    EditorUtility.SetDirty(st);
     AssetDatabase.SaveAssets();
     Debug.Log($"[TrackBuilder] maps: {s.displayName} {s.Length:F1} m, {o.displayName} {o.Length:F1} m per lap ({o.centerline.Count} points), {b.displayName} turns {turn:F2} m at {Bank} deg");
   }
 
   const float Bank = 15f;
+
+  /// <summary>Map 04 course. Heights stay inside the trained bands (training/make_steeple.py): hurdles and steps
+  /// 3-8 cm, rubble 2-5 cm. Hurdles and steps span the track between the rails, so every lane meets the same course.
+  ///   14-26 m  three hurdles, 3 / 4.5 / 6 cm      34-38 m  a 5 cm step up and down
+  ///   44 m     7 cm hurdle                        50-62 m  rubble field (24 blocks, seeded)
+  ///   67-71 m  two-stage staircase, 4 + 4 cm      80-90 m  three hurdles, 5 / 6.5 / 8 cm</summary>
+  static List<Obstacle> SteepleCourse(float halfWidth) {
+    float across = 2f * halfWidth - 0.12f;
+    var o = new List<Obstacle>();
+    void Add(string kind, float s, float lat, float along, float acr, float h, float yaw = 0f) => o.Add(new Obstacle { kind = kind, s = s, lateral = lat, along = along, across = acr, height = h, yaw = yaw });
+    Add("hurdle", 14f, 0f, 0.12f, across, 0.03f); Add("hurdle", 20f, 0f, 0.12f, across, 0.045f); Add("hurdle", 26f, 0f, 0.12f, across, 0.06f);
+    Add("step", 36f, 0f, 4f, across, 0.05f);
+    Add("hurdle", 44f, 0f, 0.14f, across, 0.07f);
+    var rng = new System.Random(4);
+    for (int i = 0; i < 24; i++) {
+      float sz = 0.12f + 0.16f * (float)rng.NextDouble();
+      Add("rubble", 50f + 12f * (float)rng.NextDouble(), (float)(rng.NextDouble() * 2 - 1) * (halfWidth - 0.25f), sz, sz * (0.6f + 0.8f * (float)rng.NextDouble()),
+          0.02f + 0.03f * (float)rng.NextDouble(), (float)rng.NextDouble() * 180f);
+    }
+    Add("step", 69f, 0f, 4f, across, 0.04f); Add("step", 69.5f, 0f, 2f, across, 0.08f);
+    Add("hurdle", 80f, 0f, 0.12f, across, 0.05f); Add("hurdle", 85f, 0f, 0.12f, across, 0.065f); Add("hurdle", 90f, 0f, 0.15f, across, 0.08f);
+    return o;
+  }
 
   /// <summary>30 m straights joined by two 180 degree left turns of radius 6 m; the lap starts 5 m into the south straight.</summary>
   static void Oval(MapDefinition o) {
@@ -100,7 +131,7 @@ public static class TrackBuilder {
     var scene = EditorSceneManager.OpenScene(targetScene, OpenSceneMode.Single);
     var mjRoot = GameObject.Find("go2_scene");
     foreach (var oldName in new[] { "Track01", "TrackVisuals" }) { var g = GameObject.Find(oldName); if (g != null) Object.DestroyImmediate(g); }
-    foreach (var oldName in new[] { "rails", "bank" }) { var old = mjRoot.transform.Find(oldName); if (old != null) Object.DestroyImmediate(old.gameObject); }
+    foreach (var oldName in new[] { "rails", "bank", "obstacles" }) { var old = mjRoot.transform.Find(oldName); if (old != null) Object.DestroyImmediate(old.gameObject); }
 
     Material mA = Mat("TrackA", new Color(0.30f, 0.32f, 0.36f)), mB = Mat("TrackB", new Color(0.36f, 0.38f, 0.42f)),
              mRail = Mat("Rail", new Color(0.85f, 0.25f, 0.15f)), mLine = Mat("Line", Color.white), mMark = Mat("Marker", new Color(0.95f, 0.8f, 0.1f));
@@ -169,6 +200,7 @@ public static class TrackBuilder {
       }
     }
     bank.Build(mapAssetPath, mjRoot.transform, vis.transform, mA);
+    Obstacles(map, mjRoot.transform, vis.transform);
     // Start / finish line and checkpoint marks, across the track at their arc position (lying on the bank where there is one).
     System.Func<float, Vector2, Quaternion> OnTrack = (s, tan) => Yaw(tan) * Quaternion.Euler(map.BankAt(s), 0f, 0f);
     var p0 = map.PointAt(0f, out var t0);
@@ -195,6 +227,53 @@ public static class TrackBuilder {
     int phys = Object.FindObjectsByType<Rigidbody>(FindObjectsInactive.Include, FindObjectsSortMode.None).Length + Object.FindObjectsByType<Collider>(FindObjectsInactive.Include, FindObjectsSortMode.None).Length;
     EditorSceneManager.SaveScene(scene); AssetDatabase.SaveAssets();
     Debug.Log($"[TrackBuilder] {targetScene}: map '{map.displayName}' {map.Length:F1} m, {n} segments, {rails.transform.childCount} MuJoCo rail geoms, {vis.transform.childCount} visuals, PhysX components={phys}");
+  }
+
+  /// <summary>Steeplechase obstacles: MuJoCo box geoms with the floor's contact settings (what the policy collides
+  /// with, same as the training scene) plus Blender-made visuals scaled onto each box (Assets/Art/Exports/GLB,
+  /// tools/blender/steeple_props.py). The visual meshes are unit cubes centred on the origin.</summary>
+  static void Obstacles(MapDefinition map, Transform mjRoot, Transform visRoot) {
+    if (map.obstacles == null || map.obstacles.Count == 0) return;
+    var root = new GameObject("obstacles"); root.transform.SetParent(mjRoot, false);
+    for (int i = 0; i < map.obstacles.Count; i++) {
+      var o = map.obstacles[i]; var c = o.Center(map, out var along);
+      var pos = U(c, o.height * 0.5f); var rot = Yaw(along);
+      var go = new GameObject($"obs{i}_{o.kind}"); go.transform.SetParent(root.transform, false); go.transform.SetPositionAndRotation(pos, rot);
+      var g = go.AddComponent<MjGeom>(); g.ShapeType = MjShapeComponent.ShapeTypes.Box; g.Box.Extents = new Vector3(o.along * 0.5f, o.height * 0.5f, o.across * 0.5f);
+      var st = g.Settings; st.Priority = 1; st.Friction.Sliding = 0.6f; st.Solver.ConDim = 3; st.Filtering.Contype = 1; st.Filtering.Conaffinity = 0; g.Settings = st;
+
+      var src = AssetDatabase.LoadAssetAtPath<GameObject>($"Assets/Art/Exports/GLB/{o.kind}.fbx");
+      var mf = src != null ? src.GetComponentInChildren<MeshFilter>() : null;
+      var v = new GameObject($"vis{i}_{o.kind}"); v.transform.SetParent(visRoot, false);
+      v.transform.SetPositionAndRotation(pos, rot); v.transform.localScale = new Vector3(o.along, o.height, o.across);
+      if (mf != null) {
+        v.AddComponent<MeshFilter>().sharedMesh = mf.sharedMesh;
+        v.AddComponent<MeshRenderer>().sharedMaterials = mf.GetComponent<MeshRenderer>().sharedMaterials;
+      } else {   // props not built yet: plain boxes
+        v.AddComponent<MeshFilter>().sharedMesh = Resources.GetBuiltinResource<Mesh>("Cube.fbx");
+        v.AddComponent<MeshRenderer>().sharedMaterial = Mat("Obstacle", new Color(0.2f, 0.5f, 0.8f));
+      }
+    }
+    Debug.Log($"[TrackBuilder] {map.obstacles.Count} obstacle geoms (max height {map.obstacles.Max(x => x.height) * 100:F1} cm)");
+  }
+
+  /// <summary>Map 04 only: Track04 from the four-racer scene. Racers use the steeplechase policy when it exists
+  /// (graduated s1 run, Assets/Policies/go2_loco_steeple.onnx), otherwise the slope-trained bank policy.</summary>
+  [MenuItem("PoRace/Build Steeplechase")]
+  public static void BuildSteeple() {
+    CreateMaps();
+    const string path = "Assets/Scenes/Track04.unity";
+    BuildScene(MapDir + "/Map04_Steeplechase.asset", "Assets/Scenes/Track01x4.unity", path);
+    var policy = AssetDatabase.LoadAssetAtPath<Unity.InferenceEngine.ModelAsset>("Assets/Policies/go2_loco_steeple.onnx")
+              ?? AssetDatabase.LoadAssetAtPath<Unity.InferenceEngine.ModelAsset>("Assets/Policies/go2_loco_bank.onnx");
+    var scene = EditorSceneManager.OpenScene(path, OpenSceneMode.Single);
+    foreach (var c in Object.FindObjectsByType<Go2Controller>(FindObjectsInactive.Include, FindObjectsSortMode.None)) { c.locomotionModel = policy; EditorUtility.SetDirty(c); }
+    EditorSceneManager.SaveScene(scene);
+    Debug.Log($"[TrackBuilder] Track04 locomotion policy: {AssetDatabase.GetAssetPath(policy)}");
+    if (!EditorBuildSettings.scenes.Any(sc => sc.path == path)) {
+      var list = EditorBuildSettings.scenes.ToList(); int at = list.FindIndex(sc => sc.path == "Assets/Scenes/Track03.unity") + 1;
+      list.Insert(at > 0 ? at : list.Count, new EditorBuildSettingsScene(path, true)); EditorBuildSettings.scenes = list.ToArray();
+    }
   }
 
   [MenuItem("PoRace/Rebuild Launch Tracks")]

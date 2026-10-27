@@ -5,6 +5,7 @@
   python eval.py --rung r2 --params runs/r2/params.pkl        # 30 N.s push + 1 kg cube drop, 9/10 seeds
   python eval.py --rung r3 --params runs/r3/params.pkl        # getup: standing within 3 s from fallen, 9/10 seeds
   python eval.py --rung bank --params runs/r5/params.pkl      # 15 deg slope, straight + circling, 9/10 seeds
+  python eval.py --rung steeple --params runs/s1/params.pkl --seeds 100   # obstacle field, graduation gate 90/100
 """
 import argparse
 
@@ -19,10 +20,10 @@ Q, V = slice(7, C.NQ_ROBOT), slice(6, C.NV_ROBOT)
 
 
 class Sim:
-  def __init__(self, params, env):
+  def __init__(self, params, env, xml=None):
     self.policy = policy_from_params(params)
     self.env = env
-    self.m = mujoco.MjModel.from_xml_path(str(C.SCENE_XML))
+    self.m = mujoco.MjModel.from_xml_path(str(xml or C.SCENE_XML))
     self.d = mujoco.MjData(self.m)
     self.imu = self.m.site(C.IMU_SITE).id
     self.adr = {s: self.m.sensor_adr[self.m.sensor(s).id] for s in [C.GYRO_SENSOR, C.LOCAL_LINVEL_SENSOR, C.UPVECTOR_SENSOR]}
@@ -192,6 +193,34 @@ def run_bank(loco_params, seeds, deg=15.0):
   return passes >= need
 
 
+def run_steeple(loco_params, seeds):
+  """Obstacle field (make_steeple.py, Map 04). Spawn anywhere in the field like training (dropped from 10 cm above
+  home height), random heading: 1.0 m/s straight, 0.8 m/s with yaw 0.6 rad/s, 1.3 m/s straight; 4 s each.
+  Pass: upright throughout, no NaN, mean tracking error < 0.35 m/s after each 1 s transient.
+  Graduation gate (CLAUDE.md): 100 consecutive episodes, >= 90 % pass, zero NaN."""
+  passes = 0; nans = 0; errs_all = []
+  sim = Sim(loco_params, "joystick", C.ASSET_PATH / "scene_steeple.xml")
+  for seed in range(seeds):
+    rng = np.random.default_rng(seed); sim.reset(rng)
+    sim.d.qpos[0:2] = rng.uniform(-12, 12, 2); sim.d.qpos[2] += 0.1
+    yaw = rng.uniform(-np.pi, np.pi); sim.d.qpos[3:7] = [np.cos(yaw / 2), 0, 0, np.sin(yaw / 2)]
+    mujoco.mj_forward(sim.m, sim.d); errs = []; ok = True
+    for cmd in ([1.0, 0, 0], [0.8, 0, 0.6], [1.3, 0, 0]):
+      cmd = np.array(cmd, np.float32)
+      for k in range(int(4 / C.CTRL_DT)):
+        sim.control_step(cmd); ok &= sim.upright()
+        if k >= int(1 / C.CTRL_DT):
+          v = sim.sensor(C.LOCAL_LINVEL_SENSOR); w = sim.sensor(C.GYRO_SENSOR)
+          errs.append(np.linalg.norm([v[0] - cmd[0], v[1] - cmd[1], 0.5 * (w[2] - cmd[2])]))
+    bad = bool(np.isnan(sim.d.qpos).any()); nans += bad
+    e = float(np.nan_to_num(np.mean(errs), nan=9.0)); ok &= e < 0.35 and not bad; errs_all.append(e)
+    print(f"seed {seed}: start ({sim.d.qpos[0]:.1f},{sim.d.qpos[1]:.1f}) mean vel err {e:.3f} {'OK' if ok else 'FAIL'}", flush=True); passes += ok
+  need = int(np.ceil(0.9 * seeds))
+  print(f"STEEPLE: {passes}/{seeds} passed (need {need}), mean err {np.mean(errs_all):.3f}, NaN episodes {nans} -> "
+        f"{'PASS' if passes >= need and nans == 0 else 'FAIL'}")
+  return passes >= need and nans == 0
+
+
 def run_combo(loco_params, getup_params, seeds):
   """Walk at 0.5 m/s, get flipped onto a random fallen pose at 2 s, stand up with the getup policy, switch back
   (same rule as Unity: Getup when upvector z < 0, Locomotion after 0.5 s with z > 0.9) and walk again.
@@ -229,7 +258,7 @@ def run_combo(loco_params, getup_params, seeds):
 
 if __name__ == "__main__":
   ap = argparse.ArgumentParser()
-  ap.add_argument("--rung", choices=["r0", "r1", "r2", "r3", "combo", "crowd", "bank"], required=True)
+  ap.add_argument("--rung", choices=["r0", "r1", "r2", "r3", "combo", "crowd", "bank", "steeple"], required=True)
   ap.add_argument("--getup_params")
   ap.add_argument("--params", required=True)
   ap.add_argument("--seeds", type=int, default=10)
@@ -237,6 +266,8 @@ if __name__ == "__main__":
   a = ap.parse_args()
   if a.rung == "bank":
     raise SystemExit(0 if run_bank(brax_model.load_params(a.params), a.seeds, a.deg) else 1)
+  if a.rung == "steeple":
+    raise SystemExit(0 if run_steeple(brax_model.load_params(a.params), a.seeds) else 1)
   if a.rung == "crowd":
     raise SystemExit(0 if run_crowd_getup(brax_model.load_params(a.params), a.seeds) else 1)
   if a.rung == "combo":

@@ -27,7 +27,7 @@ def default_config() -> config_dict.ConfigDict:
               tracking_lin_vel=1.0, tracking_ang_vel=0.5, lin_vel_z=-0.5, ang_vel_xy=-0.05, orientation=-5.0,
               dof_pos_limits=-1.0, pose=0.5, termination=-1.0, stand_still=-1.0, torques=-0.0002,
               action_rate=-0.01, energy=-0.001, feet_clearance=-2.0, feet_height=-0.2, feet_slip=-0.1,
-              feet_air_time=0.1),
+              feet_air_time=0.1, progress=0.0),
           tracking_sigma=0.25, sigma_speed_scale=False, max_foot_height=0.1),
       pert_config=config_dict.create(enable=False, velocity_kick=[0.0, 3.0], kick_durations=[0.05, 0.2],
                                      kick_wait_times=[1.0, 3.0]),
@@ -39,6 +39,9 @@ def default_config() -> config_dict.ConfigDict:
       # Commands are sampled uniformly in [lo, a]; lo defaults to -a (symmetric). A racing policy uses a fast forward
       # range with a modest reverse, e.g. a=[3.0, 0.8, 1.2], lo=[-1.0, -0.8, -1.2].
       command_config=config_dict.create(a=[1.5, 0.8, 1.2], lo=[-1.5, -0.8, -1.2], b=[0.9, 0.25, 0.5]),
+      # Steeplechase (E.3): scene_xml = scene_steeple.xml (static obstacle field, make_steeple.py). Spawns anywhere in
+      # the field, lifted so the feet start above the tallest obstacle; the robot drops onto whatever is under it.
+      scene_xml="", terrain_config=config_dict.create(enable=False, spawn_half=12.0, spawn_lift=0.1),
       impl="warp", naconmax=20 * 8192, njmax=128,  # full-collision model: a fallen dog has ~25 contacts; 4-8/env (go1 feet-only) drops contacts and bodies sink through the floor
   )
 
@@ -72,7 +75,10 @@ class Joystick(Go2Env):
     qpos = self._init_q
     qvel = jp.zeros(self.mjx_model.nv)
     rng, key = jax.random.split(rng)
-    qpos = qpos.at[0:2].set(qpos[0:2] + jax.random.uniform(key, (2,), minval=-0.5, maxval=0.5))
+    tc = self._config.terrain_config
+    half = tc.spawn_half if tc.enable else 0.5
+    qpos = qpos.at[0:2].set(qpos[0:2] + jax.random.uniform(key, (2,), minval=-half, maxval=half))
+    if tc.enable: qpos = qpos.at[2].add(tc.spawn_lift)
     rng, key = jax.random.split(rng)
     yaw = jax.random.uniform(key, (1,), minval=-3.14, maxval=3.14)
     qpos = qpos.at[3:7].set(math.quat_mul(qpos[3:7], math.axis_angle_to_quat(jp.array([0, 0, 1]), yaw)))
@@ -264,6 +270,10 @@ class Joystick(Go2Env):
         "feet_clearance": jp.sum(jp.abs(foot_z - max_h) * jp.sqrt(jp.linalg.norm(vel_xy, axis=-1))),
         "feet_height": jp.sum(jp.square(info["swing_peak"] / max_h - 1.0) * first_contact) * (cmd_norm > 0.01),
         "feet_air_time": jp.sum((info["feet_air_time"] - 0.1) * first_contact) * (cmd_norm > 0.01),
+        # Fraction of the commanded planar speed actually made along the command (0..1). Unlike the Gaussian tracking
+        # term it still has a slope when the robot is far below the command, so slowing down on rough ground costs
+        # reward (steeplechase s1 learned to creep, then stood still). Off (scale 0) except with --steeple.
+        "progress": jp.clip(jp.dot(local_vel[:2], cmd[:2]) / jp.maximum(jp.sum(jp.square(cmd[:2])), 0.01), 0.0, 1.0) * (jp.linalg.norm(cmd[:2]) > 0.1),
         "dof_pos_limits": jp.sum(-jp.clip(qpos - self._soft_lowers, None, 0.0) + jp.clip(qpos - self._soft_uppers, 0.0, None)),
     }
 

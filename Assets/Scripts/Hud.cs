@@ -30,7 +30,7 @@ public class Hud : MonoBehaviour {
       _frames = 0; _fpsTimer = 0f; _lastTicks = _ticks;
     }
     if (title) title.text = "PoRace Go2";
-    if (version) version.text = "v" + Application.version;
+    if (version) version.text = BuildInfo.Watermark;   // YYMMDD build watermark, bottom-right
     var state = autoReset != null ? autoReset.State.ToString() : (controller.Upright ? "RACING" : "FALLEN_RECOVERING");
     if (behaviour) behaviour.text = $"{controller.mode}\n{state}";
     if (telemetry) {
@@ -51,8 +51,8 @@ public class Hud : MonoBehaviour {
   public MultiRaceOrchestrator multiRace;
   public void OnReset() { if (multiRace != null) multiRace.Restart(); else if (race != null) race.Restart(); else controller.ResetToHome(); }
   public void OnShove() { if (multiRace != null) shove.target = multiRace.Leader().controller; shove.PushRandom(); }
-  public void OnCube() => cubes.ThrowAtRobot();
-  public void OnDrop() => cubes.DropOnRobot();
+  public void OnCube() => cubes.ThrowAtRobot(3f, multiRace != null ? multiRace.Leader().controller : null);
+  public void OnDrop() => cubes.DropOnRobot(multiRace != null ? multiRace.Leader().controller : null);
   public void OnMode(int m) => controller.mode = (Go2Mode)m;
   public void OnMenu() { if (Application.CanStreamedLevelBeLoaded("Menu")) UnityEngine.SceneManagement.SceneManager.LoadScene("Menu"); }
 
