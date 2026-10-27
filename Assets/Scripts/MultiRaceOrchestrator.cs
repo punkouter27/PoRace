@@ -25,6 +25,7 @@ public class Racer {
   [NonSerialized] public RaceState state;
   [NonSerialized] public bool active = true;
   [NonSerialized] public float stuckFor; [NonSerialized] public int unsticks;
+  [NonSerialized] public float unstickDist, backoff; [NonSerialized] public int unstickChain, backoffs;   // pinned-racer back-off (G.10)
   // Tactics (lane choice): offset is added to the racer's racing-line lane; intent is what the HUD arrow shows.
   [NonSerialized] public float lateral, offset, aggression;
   [NonSerialized] public string intent = "";
@@ -120,6 +121,7 @@ public unsafe class MultiRaceOrchestrator : MonoBehaviour {
       r.lane = lanes[i];
       r.speed = r.cruiseSpeed * (1f - speedSpread * (float)rng.NextDouble());
       r.distance = 0; r.segment = 0; r.lap = 0; r.checkpoint = 0; r.finishTime = -1; r.place = 0; r.stuckFor = 0; r.unsticks = 0;
+      r.unstickDist = 0; r.backoff = 0; r.unstickChain = 0; r.backoffs = 0;
       r.offset = 0; r.lateral = r.lane; r.intent = ""; r.passing = null; r.falls = 0; r.overtakes = 0; r.state = RaceState.RACING;
       Spawn(r, 0f);
     }
@@ -208,7 +210,14 @@ public unsafe class MultiRaceOrchestrator : MonoBehaviour {
       float vx = (float)d->qvel[M.BaseDof], vy = (float)d->qvel[M.BaseDof + 1];
       bool stuck = c.Active == Go2Mode.Locomotion && c.FilteredCommand.x > 1.0f && vx * vx + vy * vy < 0.3f * 0.3f;
       r.stuckFor = stuck ? r.stuckFor + Go2Controller.SimDt : 0f;
-      if (r.stuckFor > 0.5f) { c.RestartCommandRamp(); r.stuckFor = 0f; r.unsticks++; }
+      if (r.stuckFor > 0.5f) {
+        c.RestartCommandRamp(); r.stuckFor = 0f; r.unsticks++;
+        // Pinned (six restarts in a row, under 0.3 m gained): restarting from a standstill against an 8 cm hurdle never
+        // clears it (Steeplechase seed 3, Blue at 90 m: 796 restarts, DNF). Back off ~0.6 m, then come again with a run-up.
+        r.unstickChain = dist - r.unstickDist < 0.3f ? r.unstickChain + 1 : 1; r.unstickDist = dist;
+        if (r.unstickChain >= 6) { r.backoff = 1.2f; r.unstickChain = 0; r.backoffs++; }
+      }
+      if (r.backoff > 0f) { r.backoff -= Go2Controller.SimDt; c.command = new Vector3(-0.5f, 0f, Mathf.Clamp(steerGain * err, -1.2f, 1.2f)); }
       if (Mathf.Abs(lateral) > map.halfWidth + 1f) c.ResetToHome();   // left the track: back to the last checkpoint
     }
     if (Phase == RacePhase.Racing) DetectOvertakes();
@@ -228,7 +237,7 @@ public unsafe class MultiRaceOrchestrator : MonoBehaviour {
       _testDone = true;
       bool ok = Phase == RacePhase.Finished;
       Debug.Log($"[Race4] {(ok ? "FINISHED" : "DNF")} map={map.displayName} laps={Laps} length={_total:F1}m seed={Seed} | " + string.Join(" | ", Standings().Select(r =>
-          $"{r.name} {(r.finishTime >= 0 ? r.finishTime.ToString("F2", CultureInfo.InvariantCulture) + "s" : "DNF@" + r.distance.ToString("F0") + "m")} lane={r.lane:F1} v={r.speed:F2} resets={(r.autoReset != null ? r.autoReset.Resets : 0)} unstuck={r.unsticks} falls={r.falls} passes={r.overtakes}"))
+          $"{r.name} {(r.finishTime >= 0 ? r.finishTime.ToString("F2", CultureInfo.InvariantCulture) + "s" : "DNF@" + r.distance.ToString("F0") + "m")} lane={r.lane:F1} v={r.speed:F2} resets={(r.autoReset != null ? r.autoReset.Resets : 0)} unstuck={r.unsticks}{(r.backoffs > 0 ? " backoffs=" + r.backoffs : "")} falls={r.falls} passes={r.overtakes}"))
           + $" | flips={_flips} bumps={Bumps} bumpTime={BumpSteps * Go2Controller.SimDt:F2}s");
       double mean = _steps > 0 ? _stepMs / _steps : 0;
       Debug.Log($"[Perf4] {_live.Count} racers: physics step mean {mean:F4} ms max {_maxMs:F3} ms | per 50 Hz control step {mean * Go2Controller.Decimation:F3} ms (budget 5.0)");

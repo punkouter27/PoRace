@@ -41,7 +41,9 @@ def default_config() -> config_dict.ConfigDict:
       command_config=config_dict.create(a=[1.5, 0.8, 1.2], lo=[-1.5, -0.8, -1.2], b=[0.9, 0.25, 0.5]),
       # Steeplechase (E.3): scene_xml = scene_steeple.xml (static obstacle field, make_steeple.py). Spawns anywhere in
       # the field, lifted so the feet start above the tallest obstacle; the robot drops onto whatever is under it.
-      scene_xml="", terrain_config=config_dict.create(enable=False, spawn_half=12.0, spawn_lift=0.1),
+      # p_outer > 0 puts that share of spawns on the ring r in [outer_r, spawn_half], where the obstacles are full height
+      # (make_steeple.py grades them by distance from the centre); 0 keeps the uniform square, bit for bit.
+      scene_xml="", terrain_config=config_dict.create(enable=False, spawn_half=12.0, spawn_lift=0.1, p_outer=0.0, outer_r=8.0),
       impl="warp", naconmax=20 * 8192, njmax=128,  # full-collision model: a fallen dog has ~25 contacts; 4-8/env (go1 feet-only) drops contacts and bodies sink through the floor
   )
 
@@ -77,7 +79,12 @@ class Joystick(Go2Env):
     rng, key = jax.random.split(rng)
     tc = self._config.terrain_config
     half = tc.spawn_half if tc.enable else 0.5
-    qpos = qpos.at[0:2].set(qpos[0:2] + jax.random.uniform(key, (2,), minval=-half, maxval=half))
+    xy = jax.random.uniform(key, (2,), minval=-half, maxval=half)
+    if tc.enable and tc.p_outer > 0:
+      rng, k1, k2, k3 = jax.random.split(rng, 4)
+      r = jax.random.uniform(k1, minval=tc.outer_r, maxval=half); th = jax.random.uniform(k2, minval=-jp.pi, maxval=jp.pi)
+      xy = jp.where(jax.random.uniform(k3) < tc.p_outer, jp.array([r * jp.cos(th), r * jp.sin(th)]), xy)
+    qpos = qpos.at[0:2].set(qpos[0:2] + xy)
     if tc.enable: qpos = qpos.at[2].add(tc.spawn_lift)
     rng, key = jax.random.split(rng)
     yaw = jax.random.uniform(key, (1,), minval=-3.14, maxval=3.14)

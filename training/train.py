@@ -44,7 +44,7 @@ ENVS = {"joystick": (joystick.Joystick, joystick.default_config, "Go1JoystickFla
 CONTACTS_PER_ENV = 30  # full-collision Go2 lying on the floor; fewer drops contacts and bodies sink
 
 
-def make_env(name, pert=False, cubes=False, num_worlds=8192, kick_max=None, vx_max=None, tilt_max=None, steeple=False):
+def make_env(name, pert=False, cubes=False, num_worlds=8192, kick_max=None, vx_max=None, tilt_max=None, steeple=False, tweak=None):
   cls, cfg_fn, _ = ENVS[name]
   cfg = cfg_fn()
   # naconmax is a TOTAL across worlds. Size it to the worlds this env instance really runs, otherwise the
@@ -72,6 +72,7 @@ def make_env(name, pert=False, cubes=False, num_worlds=8192, kick_max=None, vx_m
     if steeple:
       cfg.scene_xml = str(joystick.C.ASSET_PATH / "scene_steeple.xml"); cfg.terrain_config.enable = True
       cfg.reward_config.scales.progress = 1.0
+  if tweak is not None: cfg = tweak(cfg)
   return cls(config=cfg), cfg
 
 
@@ -89,13 +90,26 @@ def main():
   ap.add_argument("--kick_max", type=float, default=None, help="max velocity kick in m/s (impulse = 0.318*mass*kick)")
   ap.add_argument("--steeple", action="store_true", help="obstacle field scene (make_steeple.py)")
   ap.add_argument("--pert", action="store_true"); ap.add_argument("--cubes", action="store_true"); ap.add_argument("--dr", action="store_true")
+  # Fine-tuning knobs (2026-10-27): s3 went NaN fine-tuning at the default 3e-4 from a converged policy.
+  ap.add_argument("--lr", type=float, default=None, help="PPO learning rate (default 3e-4)")
+  ap.add_argument("--entropy", type=float, default=None, help="PPO entropy cost (default 1e-2)")
+  ap.add_argument("--progress", type=float, default=None, help="progress reward weight (steeple default 1.0, else 0)")
+  ap.add_argument("--swing", type=float, default=None, help="swing foot height target in m (default 0.10)")
+  ap.add_argument("--p_outer", type=float, default=None, help="steeple: share of spawns on the full-height outer ring")
   a = ap.parse_args()
 
   ppo_params = locomotion_params.brax_ppo_config(ENVS[a.env][2])
   if a.timesteps is not None: ppo_params.num_timesteps = a.timesteps
   if a.num_envs is not None: ppo_params.num_envs = a.num_envs
-  env, cfg = make_env(a.env, a.pert, a.cubes, num_worlds=ppo_params.num_envs, kick_max=a.kick_max, vx_max=a.vx_max, tilt_max=a.tilt_max, steeple=a.steeple)
-  eval_env, _ = make_env(a.env, a.pert, a.cubes, num_worlds=ppo_params.get("num_eval_envs", 128), kick_max=a.kick_max, vx_max=a.vx_max, tilt_max=a.tilt_max, steeple=a.steeple)
+  if a.lr is not None: ppo_params.learning_rate = a.lr
+  if a.entropy is not None: ppo_params.entropy_cost = a.entropy
+  def tweak(cfg):
+    if a.progress is not None: cfg.reward_config.scales.progress = a.progress
+    if a.swing is not None: cfg.reward_config.max_foot_height = a.swing
+    if a.p_outer is not None: cfg.terrain_config.p_outer = a.p_outer
+    return cfg
+  env, cfg = make_env(a.env, a.pert, a.cubes, num_worlds=ppo_params.num_envs, kick_max=a.kick_max, vx_max=a.vx_max, tilt_max=a.tilt_max, steeple=a.steeple, tweak=tweak)
+  eval_env, _ = make_env(a.env, a.pert, a.cubes, num_worlds=ppo_params.get("num_eval_envs", 128), kick_max=a.kick_max, vx_max=a.vx_max, tilt_max=a.tilt_max, steeple=a.steeple, tweak=tweak)
   logdir = Path(a.logdir or f"runs/{a.env}-{time.strftime('%Y%m%d-%H%M%S')}").resolve()
   ckpt = logdir / "checkpoints"; ckpt.mkdir(parents=True, exist_ok=True)
   (ckpt / "config.json").write_text(json.dumps(cfg.to_dict(), indent=1, default=str))
@@ -121,7 +135,8 @@ def main():
       writer.add_scalar(k, float(v), num_steps)
     writer.flush()
     r = metrics.get("eval/episode_reward", float("nan"))
-    print(f"{num_steps:>12,d}  reward={r:8.3f}  {time.monotonic() - t0:7.0f}s", flush=True)
+    nan = [k for k, v in metrics.items() if not np.isfinite(float(v))]
+    print(f"{num_steps:>12,d}  reward={r:8.3f}  {time.monotonic() - t0:7.0f}s" + (f"  NAN in {len(nan)} metrics: {nan[:4]}" if nan else ""), flush=True)
 
   make_inference_fn, params, _ = ppo.train(
       environment=env, eval_env=eval_env, progress_fn=progress, seed=a.seed, num_eval_envs=num_eval_envs,

@@ -233,3 +233,23 @@ Machine change: this workstation has an RTX 2060 (6 GB, sm_75), not the RTX 5070
 - s3 continues from s2 @ 68.8M.
 - s3 (from s2 @ 68.8M) went NaN between 22.9M and 34.4M and was stopped; its clean checkpoints scored 16/20 (11.5M) and 17/20 (22.9M), no better than s2 @ 68.8M.
 - **Shipped without graduating (owner's decision):** `Assets/Policies/go2_loco_steeple.onnx` = s2 @ 68.8M (82/100 gate, need 90; onnx-vs-numpy 6.35e-6), on Track04 only. Headless Steeplechase seeds 1-5: **20/20 racers finish** (old bank policy: 0/20), 89.5-226.9 s, 0-2 respawns and 0-65 un-sticks per racer: the hurdles still stall them. Report: `docs/report/steeple_report.html`.
+
+## 2026-10-27 Steeplechase GRADUATED (G.10): s7 @ 68.8M, 277/300, Track04 40/40
+
+Unattended session, editor closed, RTX 2060, 1024 envs. Every run starts from the previous best and keeps `--pert --cubes --dr --tilt_max 17 --steeple`. New trainer flags (all default off, earlier runs reproduce): `--lr`, `--entropy`, `--progress`, `--swing`, `--p_outer` (share of spawns on the full-height outer ring r 8-12 m). New tooling: `training/launch.sh` (background GPU run, filtered log), `autoprobe.sh` (probe every checkpoint as it lands), `gate300.sh` / `gateall.sh` / `gatespeed.sh` + `autogate.sh` (graduation checks on every checkpoint, CPU, in parallel with training), `diag_steeple.py` (per-phase stall breakdown), `eval.py --first_seed`.
+
+**Selection bias in the old gate.** Checkpoints were picked on seeds 0-99 and then judged on the same seeds: s5 @ 80.3M scored 94/100 there, but 84 and 87 on seeds 100-199 and 200-299. From s6 on, graduation = >= 90 on each of three 100-seed sets (0-99, 100-199, 200-299) and zero NaN, plus R2 x30, bank x30, R1 x20 (`gateall.sh`).
+
+| run | from | change | best checkpoint | steeple gate | R2 x30 |
+|---|---|---|---|---|---|
+| s2 (shipped before) | r7 | progress reward | 68.8M | 82/100 | 10/10 (x10) |
+| s4 | s2 @ 68.8M | lr 1e-4, p_outer 0.5 | 22.9M | 86/100 (later 77, 84, 75) | - |
+| s5 | s4 @ 22.9M | swing target 0.10 -> 0.13 m | 80.3M | 94/100 on 0-99, **265/300** | 30/30 |
+| s6 | s5 @ 80.3M | continue, 150M | 54.1M | 273/300 (91/92/90) | **23/30 FAIL** |
+| s7 | s6 @ 54.1M | kick_max 7 (R2 drifted: s2-s6 used the default 3 m/s kick, the R2 bar needs ~6.2) | **68.8M** | **277/300 (94/91/92), NaN 0** | **30/30** |
+
+- Failure mode (`diag_steeple.py`, s4/s5): never falls; stops dead (vx ~ 0) in front of 6-8 cm hurdles and steps for most of a 4 s phase. The higher swing target shortened the stalls (60-100 % -> 30-60 % of a phase) and moved the pass rate from ~85 % to ~89-91 %.
+- s7 @ 68.8M: steeple 277/300, R2 30/30, bank 15 deg 30/30, R1 20/20, R0 10/10; no NaN metric in any run (s4-s7). Exported: `Assets/Policies/go2_loco_steeple.onnx` (onnx-vs-numpy 6.59e-6); weights `training/final/go2_steeple_params.pkl`.
+- **Track04 headless, seeds 1-10: 40/40 racers finish, 77.5-158.5 s** (s2: 20/20 over seeds 1-5, 89.5-226.9 s, up to 65 un-sticks). Before the fix below, seed 3 Blue was pinned at the 90 m hurdle (8 cm, the course's tallest) for the whole race: 796 un-sticks, DNF.
+- **Back-off (`MultiRaceOrchestrator`):** an un-stick only restarts the command ramp, i.e. from standstill against the bar. Six restarts in a row with < 0.3 m gained now back the racer off at -0.5 m/s for 1.2 s for a run-up. Fired twice in 40 racer-races. Planar Sprint seed 1 `-noTactics` (79.31 / 79.37 / 79.45 / 80.47 s, 267 bumps) and Flat Oval seed 1 `-noTactics` (150.55 s, 419 bumps) identical to before.
+- Operational: a CPU eval container occasionally dies loading the model ("at least 4 vertices required") when several start at once; `gate300.sh` retries a set that ends without a result.

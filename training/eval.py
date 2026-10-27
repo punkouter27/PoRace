@@ -137,6 +137,18 @@ def run(rung, params, seeds):
           if sim._push_steps <= 0: sim.d.xfrc_applied[:] = 0
         if k > int(2.5 / C.CTRL_DT): ok &= sim.upright()
       details.append(f"seed {seed}: {'survived' if ok else 'FELL'}")
+    elif rung == "speed":
+      # F.9 faster dog: from standstill (joint offsets as R1), 2.0 m/s for 5 s, then 2.5 m/s for 5 s. Pass: upright and
+      # mean forward speed over the last 3 s of each at least 90 % of the command (the old freeze stood still here).
+      sim.reset(rng); ok = True; got = []
+      sim.d.qpos[Q] += rng.uniform(-0.1, 0.1, 12); mujoco.mj_forward(sim.m, sim.d)
+      for vx_cmd in (2.0, 2.5):
+        cmd = np.array([vx_cmd, 0, 0], np.float32); vs = []
+        for k in range(int(5 / C.CTRL_DT)):
+          sim.control_step(cmd); ok &= sim.upright()
+          if k >= int(2 / C.CTRL_DT): vs.append(sim.sensor(C.LOCAL_LINVEL_SENSOR)[0])
+        got.append(float(np.mean(vs))); ok &= got[-1] >= 0.9 * vx_cmd
+      details.append(f"seed {seed}: 2.0 -> {got[0]:.2f}, 2.5 -> {got[1]:.2f} m/s {'OK' if ok else 'FAIL'}")
     else:  # r3
       sim.reset(rng, fallen=True); ok = False; t_up = None
       for k in range(int(5 / C.CTRL_DT)):
@@ -145,7 +157,7 @@ def run(rung, params, seeds):
       ok = t_up is not None and t_up <= 3.0 and sim.upright()
       details.append(f"seed {seed}: {'up at %.2fs' % t_up if t_up is not None else 'never up'} {'OK' if ok else 'FAIL'}")
     passes += ok
-  need = {"r0": seeds, "r1": seeds, "r2": int(0.9 * seeds), "r3": int(0.9 * seeds)}[rung]
+  need = {"r0": seeds, "r1": seeds, "r2": int(0.9 * seeds), "r3": int(0.9 * seeds), "speed": int(0.9 * seeds)}[rung]
   print("\n".join(details))
   print(f"{rung.upper()}: {passes}/{seeds} passed (need {need}) -> {'PASS' if passes >= need else 'FAIL'}")
   return passes >= need
@@ -193,14 +205,14 @@ def run_bank(loco_params, seeds, deg=15.0):
   return passes >= need
 
 
-def run_steeple(loco_params, seeds):
+def run_steeple(loco_params, seeds, first=0):
   """Obstacle field (make_steeple.py, Map 04). Spawn anywhere in the field like training (dropped from 10 cm above
   home height), random heading: 1.0 m/s straight, 0.8 m/s with yaw 0.6 rad/s, 1.3 m/s straight; 4 s each.
   Pass: upright throughout, no NaN, mean tracking error < 0.35 m/s after each 1 s transient.
   Graduation gate (CLAUDE.md): 100 consecutive episodes, >= 90 % pass, zero NaN."""
   passes = 0; nans = 0; errs_all = []
   sim = Sim(loco_params, "joystick", C.ASSET_PATH / "scene_steeple.xml")
-  for seed in range(seeds):
+  for seed in range(first, first + seeds):
     rng = np.random.default_rng(seed); sim.reset(rng)
     sim.d.qpos[0:2] = rng.uniform(-12, 12, 2); sim.d.qpos[2] += 0.1
     yaw = rng.uniform(-np.pi, np.pi); sim.d.qpos[3:7] = [np.cos(yaw / 2), 0, 0, np.sin(yaw / 2)]
@@ -258,16 +270,17 @@ def run_combo(loco_params, getup_params, seeds):
 
 if __name__ == "__main__":
   ap = argparse.ArgumentParser()
-  ap.add_argument("--rung", choices=["r0", "r1", "r2", "r3", "combo", "crowd", "bank", "steeple"], required=True)
+  ap.add_argument("--rung", choices=["r0", "r1", "r2", "r3", "speed", "combo", "crowd", "bank", "steeple"], required=True)
   ap.add_argument("--getup_params")
   ap.add_argument("--params", required=True)
   ap.add_argument("--seeds", type=int, default=10)
+  ap.add_argument("--first_seed", type=int, default=0, help="steeple: first seed (held-out sets: 100, 200)")
   ap.add_argument("--deg", type=float, default=15.0, help="bank: slope in degrees")
   a = ap.parse_args()
   if a.rung == "bank":
     raise SystemExit(0 if run_bank(brax_model.load_params(a.params), a.seeds, a.deg) else 1)
   if a.rung == "steeple":
-    raise SystemExit(0 if run_steeple(brax_model.load_params(a.params), a.seeds) else 1)
+    raise SystemExit(0 if run_steeple(brax_model.load_params(a.params), a.seeds, a.first_seed) else 1)
   if a.rung == "crowd":
     raise SystemExit(0 if run_crowd_getup(brax_model.load_params(a.params), a.seeds) else 1)
   if a.rung == "combo":
