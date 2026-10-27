@@ -117,3 +117,6 @@ training/checkpoints/
 # Local tooling (Aura code-graph extension)
 .aura/
 .vscode/mcp.json
+
+# WebGL build: Burst output Unity writes beside the project
+/Data/
