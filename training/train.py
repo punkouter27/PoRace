@@ -96,6 +96,8 @@ def main():
   ap.add_argument("--progress", type=float, default=None, help="progress reward weight (steeple default 1.0, else 0)")
   ap.add_argument("--swing", type=float, default=None, help="swing foot height target in m (default 0.10)")
   ap.add_argument("--p_outer", type=float, default=None, help="steeple: share of spawns on the full-height outer ring")
+  ap.add_argument("--cost_scale", type=float, default=None, help="scale the torque, energy and action-rate penalties (F.9: they grow with gait frequency)")
+  ap.add_argument("--no_sigma_scale", action="store_true", help="keep the sharp tracking sigma with --vx_max (the progress reward now supplies the gradient the speed-scaled sigma was added for)")
   a = ap.parse_args()
 
   ppo_params = locomotion_params.brax_ppo_config(ENVS[a.env][2])
@@ -107,6 +109,9 @@ def main():
     if a.progress is not None: cfg.reward_config.scales.progress = a.progress
     if a.swing is not None: cfg.reward_config.max_foot_height = a.swing
     if a.p_outer is not None: cfg.terrain_config.p_outer = a.p_outer
+    if a.no_sigma_scale: cfg.reward_config.sigma_speed_scale = False
+    if a.cost_scale is not None:
+      for k in ("torques", "energy", "action_rate"): cfg.reward_config.scales[k] *= a.cost_scale
     return cfg
   env, cfg = make_env(a.env, a.pert, a.cubes, num_worlds=ppo_params.num_envs, kick_max=a.kick_max, vx_max=a.vx_max, tilt_max=a.tilt_max, steeple=a.steeple, tweak=tweak)
   eval_env, _ = make_env(a.env, a.pert, a.cubes, num_worlds=ppo_params.get("num_eval_envs", 128), kick_max=a.kick_max, vx_max=a.vx_max, tilt_max=a.tilt_max, steeple=a.steeple, tweak=tweak)

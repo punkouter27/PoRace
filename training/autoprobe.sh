@@ -18,7 +18,8 @@ while true; do
       | grep -E "M  steeple|Traceback|Error" >> "$LOG"
     echo "probed $s" >> "$LOG"
   done
-  [ "$done_run" != "0" ] && break
+  [ "$done_run" != "0" ] && [ "${last_pass:-0}" = 1 ] && break
+  [ "$done_run" != "0" ] && { last_pass=1; sleep 70; continue; }   # the final checkpoint lands as the run exits
   sleep "$EVERY"
 done
 echo "autoprobe $RUN finished" >> "$LOG"

@@ -10,6 +10,8 @@ while true; do
     age=$(( $(date +%s) - $(stat -c %Y "$D/$RUN/checkpoints/$s") )); [ $age -lt 60 ] && continue
     r=$("$(dirname "$0")/${GATE:-gate300.sh}" "$RUN" $n | tail -1); echo "$n $r" >> "$SUM"
   done
-  [ "$fin" != "0" ] && break; sleep "$EVERY"
+  [ "$fin" != "0" ] && [ "${last_pass:-0}" = 1 ] && break
+  [ "$fin" != "0" ] && { last_pass=1; sleep 70; continue; }   # the final checkpoint lands as the run exits
+  sleep "$EVERY"
 done
 echo "autogate $RUN finished" >> "$SUM"

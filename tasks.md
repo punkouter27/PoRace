@@ -76,7 +76,7 @@ Mark `[x]` when done. Each task is one commit.
 - [x] F.6 Randomized races: seeded lane draw and 6 % cruise-speed spread per race (`-seed N` reproduces a race).
 - [x] F.7 Pre-race menu (`Menu.unity`, `MenuController`): map selector from the registry, racers 1-4, laps 1-5, Start; Menu button on the race HUD. One combined build `Build/PoRace/PoRace.exe`.
 - [x] F.8 Banked turns (15 degrees): tilted-gravity slope training (`--tilt_max 17`), `eval.py --rung bank`, Map 03 Banked Oval / `Track03.unity` (324 convex mesh-geom pieces, rails on the surface), `go2_loco_bank.onnx` (r7 @ 29.5M) on Track03 only. Headless seeds 1-5: 20/20 finish, 0 un-sticks/respawns/flips. Known gap: bank eval 6/10, all failures are uphill starts from standstill at 1.5 m/s.
-- [ ] F.9 Faster dog (commands above 1.5 m/s): attempt 2 (`runs/r5`, speed-scaled sigma) froze again; see log 2026-10-26.
+- [x] F.9 Faster dog (commands above 1.5 m/s): `eval.py --rung speed` (2.0 / 2.5 m/s from standstill, >= 90 %): r13 @ 73.7M 28/30, mean 2.00 / 2.30 m/s, R1 / R2 / bank intact; `go2_loco_fast.onnx`. Progress reward + sharp sigma + effort penalties x0.25 (log 2026-10-27). Not yet used in races (needs Unity parity check and a cruise-speed change).
 
 ## Phase G: Broadcast layer (spectator features), `Assets/Scripts/Broadcast/`, `BroadcastBuilder` adds it to every race scene
 - [x] G.0 Desktop players drew nothing (URP SSAO resources missing in builds; PC renderer only): `RenderFix.RemoveSsao`. `BuildCli` (batch builds with the editor closed), `ShotProbe` (`-shots`), YYMMDD build watermark (`BuildStamp` / `BuildInfo`).

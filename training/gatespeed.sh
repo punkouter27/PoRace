@@ -14,5 +14,5 @@ for r in "speed 10" "r1 20" "r2 30" "bank 30"; do set -- $r
 done
 wait; ok=1; parts=""
 for r in speed r1 r2 bank; do l=$(tail -1 "${OUT}_$r.log"); echo "$l" | grep -q PASS || ok=0; parts="$parts | $(echo "$l" | grep -o -E '^[A-Z0-9 ]+: [0-9]+/[0-9]+')"; done
-sp=$(grep "^seed" "${OUT}_speed.log" | awk '{a+=$4; b+=$7} END {if (NR) printf "mean 2.0->%.2f 2.5->%.2f", a/NR, b/NR}')
+sp=$(grep "^seed" "${OUT}_speed.log" | awk '{a+=$5; b+=$8} END {if (NR) printf "mean 2.0->%.2f 2.5->%.2f", a/NR, b/NR}')
 echo "$RUN ${M}M: ${parts# | } ($sp) -> $([ $ok = 1 ] && echo ALL-PASS || echo FAIL)"

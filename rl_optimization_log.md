@@ -253,3 +253,21 @@ Unattended session, editor closed, RTX 2060, 1024 envs. Every run starts from th
 - **Track04 headless, seeds 1-10: 40/40 racers finish, 77.5-158.5 s** (s2: 20/20 over seeds 1-5, 89.5-226.9 s, up to 65 un-sticks). Before the fix below, seed 3 Blue was pinned at the 90 m hurdle (8 cm, the course's tallest) for the whole race: 796 un-sticks, DNF.
 - **Back-off (`MultiRaceOrchestrator`):** an un-stick only restarts the command ramp, i.e. from standstill against the bar. Six restarts in a row with < 0.3 m gained now back the racer off at -0.5 m/s for 1.2 s for a run-up. Fired twice in 40 racer-races. Planar Sprint seed 1 `-noTactics` (79.31 / 79.37 / 79.45 / 80.47 s, 267 bumps) and Flat Oval seed 1 `-noTactics` (150.55 s, 419 bumps) identical to before.
 - Operational: a CPU eval container occasionally dies loading the model ("at least 4 vertices required") when several start at once; `gate300.sh` retries a set that ends without a result.
+
+## 2026-10-27 Faster dog GRADUATED (F.9): r13 @ 73.7M, 2.5 m/s command -> 2.30 m/s
+
+New pass bar, `eval.py --rung speed`: from standstill (joint offsets as R1), 2.0 m/s for 5 s then 2.5 m/s for 5 s; pass = upright and >= 90 % of each command over the last 3 s; need 9/10. Checked with `gatespeed.sh` (speed x10 + R1 x20 + R2 x30 + bank x30) on every checkpoint. Start point s7 @ 68.8M (graduated steeple policy): 0/10, ~1.65 m/s on both commands. All runs `--pert --cubes --dr --tilt_max 17 --kick_max 7 --vx_max 2.5`, flat ground (no obstacle field).
+
+| run | from | change | speed rung (best) | mean 2.0 / 2.5 m/s |
+|---|---|---|---|---|
+| r8 | s7 @ 68.8M | progress 1, speed-scaled sigma (attempt-2 setup) | 0/10 | 1.62 / 1.74, flat; stopped at 23M |
+| r9 | s7 @ 68.8M | `--no_sigma_scale`, progress 2 | 0/10 | 1.88 / 2.09; **NaN at 91.7M**, stopped, checkpoint deleted |
+| r10 | r9 @ 68.8M | lr 5e-5 | 0/10 | 1.92 / 2.12 |
+| r11 | r10 @ 45.9M | `--cost_scale 0.25` (torque, energy, action-rate penalties) | 2/10 | 1.97 / 2.22 |
+| r12 | r11 final | continue | 8/10 | 1.97 / 2.27 (swings 3-8/10) |
+| r13 | r12 @ 54.1M | progress 3, lr 5e-5 | **10/10 @ 44.2M, 9/10 @ 73.7M** | 2.00 / 2.31 |
+
+- Why r8 stalled: with `--vx_max` the tracking sigma widens by max(1, |cmd|)^2 (attempt 2's freeze fix), so on a 2.5 m/s command running 1.7 already earns ~2/3 of the tracking reward. The progress reward now supplies the gradient that widening was for, so r9+ keep the sharp sigma (`--no_sigma_scale`).
+- Not an actuator ceiling (`diag_speed.py`, r9 @ 68.8M at 2.5 m/s): calves at the 24 N.m limit 6 % of the time, thighs 1 %, hips 0 %; peak calf speed ~25 rad/s, where the PD derivative term (-0.5 qdot) and joint damping (0.5) each take ~12 N.m.
+- **r13 @ 73.7M, 30 seeds: speed 28/30 (mean 2.00 / 2.30 m/s; failures reach 2.20-2.24 on the 2.5 command), R0 10/10, R1 20/20, R2 30/30, bank 30/30, 0 NaN metrics in r10-r13.** (44.2M: 27/30.) Exported `Assets/Policies/go2_loco_fast.onnx` (onnx-vs-numpy 5.19e-6), weights `training/final/go2_fast_params.pkl`. Not wired into any race: the flat tracks keep the parity-gated policy at 1.5 m/s cruise; a faster race needs the racers' cruise speed raised and a Unity parity / closed-loop check of this policy first.
+- Lower effort penalties mean more power at speed (cost of transport not yet measured in Unity).
