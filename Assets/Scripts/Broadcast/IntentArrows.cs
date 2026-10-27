@@ -36,7 +36,7 @@ public class IntentArrows : MonoBehaviour {
     if (Keyboard.current != null && Keyboard.current.iKey.wasPressedThisFrame) show = !show;
     var canvas = BroadcastUi.Root as RectTransform;
     foreach (var kv in _v) {
-      var r = kv.Key; var v = kv.Value; var b = r.controller.BaseTransform;
+      var r = kv.Key; var v = kv.Value; var b = r.Body.BaseTransform;
       bool on = show && b != null && race.Phase == RacePhase.Racing && r.finishTime < 0;
       v.line.enabled = on; v.tag.enabled = on && r.intent != "";
       if (!on) continue;

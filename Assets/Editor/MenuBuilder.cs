@@ -61,10 +61,11 @@ public static class MenuBuilder {
     mc.infoText = T(tr, "MapInfo", C, new Vector2(0, 265), new Vector2(600, 80), 24);
     B(tr, "BtnPrevMap", "<", C, C, new Vector2(-290, 345), new Vector2(80, 80), mc.OnPrevMap, Dark);
     B(tr, "BtnNextMap", ">", C, C, new Vector2(290, 345), new Vector2(80, 80), mc.OnNextMap, Dark);
-    T(tr, "RacersLabel", C, new Vector2(0, 165), new Vector2(400, 40), 24, "RACERS");
+    T(tr, "RacersLabel", C, new Vector2(0, 165), new Vector2(400, 40), 24, "DOGS");
     mc.racersText = T(tr, "Racers", C, new Vector2(0, 100), new Vector2(200, 70), 48);
     B(tr, "BtnRacersDown", "-", C, C, new Vector2(-150, 100), new Vector2(80, 80), mc.OnRacersDown, Dark);
     B(tr, "BtnRacersUp", "+", C, C, new Vector2(150, 100), new Vector2(80, 80), mc.OnRacersUp, Dark);
+    mc.mattText = B(tr, "BtnMatt", "+ Matt", C, C, new Vector2(282, 100), new Vector2(140, 80), mc.OnMattToggle, new Color(0.55f, 0.33f, 0.08f, 0.95f), 22).GetComponentInChildren<Text>();
     T(tr, "LapsLabel", C, new Vector2(0, 15), new Vector2(400, 40), 24, "LAPS");
     mc.lapsText = T(tr, "Laps", C, new Vector2(0, -50), new Vector2(200, 70), 48);
     B(tr, "BtnLapsDown", "-", C, C, new Vector2(-150, -50), new Vector2(80, 80), mc.OnLapsDown, Dark);

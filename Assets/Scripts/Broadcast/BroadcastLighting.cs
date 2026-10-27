@@ -36,7 +36,7 @@ public class BroadcastLighting : MonoBehaviour {
       var mat = new Material(decalMaterial) { name = "Blob" };
       mat.SetTexture("_BaseMap", ImpactFx.Radial(64, 0.15f)); mat.SetColor("_BaseColor", new Color(0f, 0f, 0f, 0.55f));
       foreach (var r in race.Live) {
-        var b = r.controller.BaseTransform; if (b == null) continue;
+        var b = r.Body.BaseTransform; if (b == null) continue;
         var go = new GameObject("blob_" + r.name); go.transform.SetParent(transform, false);
         go.AddComponent<MeshFilter>().sharedMesh = ImpactFx.Quad();
         var mr = go.AddComponent<MeshRenderer>(); mr.sharedMaterial = mat; mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off; mr.receiveShadows = false;
@@ -52,8 +52,8 @@ public class BroadcastLighting : MonoBehaviour {
 
   void LateUpdate() {
     var subject = Subject();
-    if (_spot != null && subject != null && subject.controller.BaseTransform != null) {
-      var p = subject.controller.BaseTransform.position;
+    if (_spot != null && subject != null && subject.Body.BaseTransform != null) {
+      var p = subject.Body.BaseTransform.position;
       var side = _cam != null ? Vector3.ProjectOnPlane(_cam.transform.position - p, Vector3.up).normalized : Vector3.back;
       var want = p + Vector3.up * spotHeight + side * 1.5f;
       _spot.transform.position = Vector3.Lerp(_spot.transform.position, want, 1f - Mathf.Exp(-6f * Time.unscaledDeltaTime));
@@ -69,7 +69,7 @@ public class BroadcastLighting : MonoBehaviour {
       }
     }
     foreach (var kv in _blobs) {
-      var b = kv.Key.controller.BaseTransform; if (b == null || !kv.Value.r.enabled) continue;
+      var b = kv.Key.Body.BaseTransform; if (b == null || !kv.Value.r.enabled) continue;
       var p = b.position; float h = Ground(p);
       float hx = Ground(p + Vector3.right * 0.3f) - Ground(p - Vector3.right * 0.3f), hz = Ground(p + Vector3.forward * 0.3f) - Ground(p - Vector3.forward * 0.3f);
       var n = new Vector3(-hx / 0.6f, 1f, -hz / 0.6f).normalized;

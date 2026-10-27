@@ -12,7 +12,21 @@ public enum Go2Mode { HoldHome, Locomotion, Getup }
 /// from MjScene.ctrlCallback, which fires between mj_step1 and mj_step2 exactly like the trainer.
 /// Joint order and obs layout: docs/joint_order.md. All model indices come from Go2Model (by name).
 /// </summary>
-public unsafe class Go2Controller : MonoBehaviour, IParitySource {
+public unsafe class Go2Controller : MonoBehaviour, IParitySource, IRacer {
+  // IRacer: the race-facing view of this dog (MultiRaceOrchestrator, AutoReset, broadcast layer)
+  Vector3 IRacer.Command { get => command; set => command = value; }
+  Vector3 IRacer.SpawnMj { get => spawnMj; set => spawnMj = value; }
+  float IRacer.SpawnYaw { get => spawnYaw; set => spawnYaw = value; }
+  float IRacer.HomeHeight => HomeHeight;
+  int IRacer.BaseBody => Model.BaseBody;
+  int IRacer.BaseQpos => Model.BaseQpos;
+  int IRacer.BaseDof => Model.BaseDof;
+  int IRacer.UpAdr => Model.UpAdr;
+  bool IRacer.Locomoting => Active == Go2Mode.Locomotion;
+  string IRacer.ModeName => Active.ToString();
+  float IRacer.SimDt => SimDt;
+  void IRacer.StartLocomotion() { mode = Go2Mode.Locomotion; command = Vector3.zero; }
+
   // ---- contract (training/go2/constants.py) ----
   public const float SimDt = 0.004f;
   public const int Decimation = 5;
@@ -121,7 +135,8 @@ public unsafe class Go2Controller : MonoBehaviour, IParitySource {
     m->opt.ls_iterations = 5;
     m->opt.disableflags |= (int)MujocoLib.mjtDisableBit.mjDSBL_EULERDAMP;
     Model = new Go2Model(m, prefix);
-    ModelCheck.Assert(m, Model, multiRobot ? FindObjectsByType<Go2Controller>(FindObjectsSortMode.None).Length : 1);
+    ModelCheck.Assert(m, Model, multiRobot ? FindObjectsByType<Go2Controller>(FindObjectsSortMode.None).Length : 1,
+                      FindObjectsByType<MattController>(FindObjectsSortMode.None).Length);
     m->opt.ccd_iterations = 35;
     foreach (var act in FindObjectsByType<MjActuator>(FindObjectsSortMode.None))
       for (int i = 0; i < Nu; i++) if (act.MujocoId == Model.ActId[i]) _act[i] = act;

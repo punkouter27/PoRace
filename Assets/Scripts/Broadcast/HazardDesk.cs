@@ -35,11 +35,11 @@ public class HazardDesk : MonoBehaviour {
     _lastAny = now; _lastByUser[user] = now; Fired++;
     var who = BroadcastUi.Paint(target.name, target.color); var u = BroadcastUi.Paint(user, BroadcastUi.Accent);
     switch (parts[0]) {
-      case "!drop": CubePool.Instance.DropOnRobot(target.controller); BroadcastTicker.Post($"⚡ {u} dropped a cube on {who}"); break;
-      case "!cube": CubePool.Instance.ThrowAtRobot(3f, target.controller); BroadcastTicker.Post($"⚡ {u} threw a cube at {who}"); break;
+      case "!drop": CubePool.Instance.DropOnRobot(target.Body); BroadcastTicker.Post($"⚡ {u} dropped a cube on {who}"); break;
+      case "!cube": CubePool.Instance.ThrowAtRobot(3f, target.Body); BroadcastTicker.Post($"⚡ {u} threw a cube at {who}"); break;
       case "!shove":
         float a = Random.Range(0f, Mathf.PI * 2f);
-        Shove.PushRobot(target.controller, new Vector3(Mathf.Cos(a), Mathf.Sin(a), 0f));
+        Shove.PushRobot(target.Body, new Vector3(Mathf.Cos(a), Mathf.Sin(a), 0f));
         BroadcastTicker.Post($"⚡ {u} shoved {who}"); break;
     }
     Debug.Log($"[Hazard] t={now:F1}s {user} {parts[0]} -> {target.name}");

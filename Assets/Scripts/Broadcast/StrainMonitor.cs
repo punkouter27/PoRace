@@ -46,7 +46,8 @@ public class StrainMonitor : MonoBehaviour {
 
   /// <summary>Renderers of each leg link, keyed by the joint that moves that link (body FL_hip carries FL_hip_joint...).</summary>
   Track Bind(Racer r) {
-    var t = new Track(); var root = r.controller.BaseTransform; if (root == null) return t;
+    var t = new Track(); if (r.matt != null) return t;   // leg tint maps Go2 link meshes; Matt's skin is one mesh
+    var root = r.controller.BaseTransform; if (root == null) return t;
     var bodyJoint = new Dictionary<string, int>();
     for (int i = 0; i < Go2Model.Nu; i++) bodyJoint[r.controller.prefix + Go2Model.ActuatorNames[i]] = i;   // actuator FL_hip == body FL_hip
     foreach (var rend in root.GetComponentsInChildren<Renderer>()) {
@@ -69,7 +70,7 @@ public class StrainMonitor : MonoBehaviour {
       var s = sensors.Of(r); if (s == null) continue;
       if (!_t.TryGetValue(r, out var t)) _t[r] = t = BroadcastUi.Headless ? new Track() : Bind(r);
       int hot = 0; float max = 0f;
-      for (int i = 0; i < Go2Model.Nu; i++) { if (s.effort[i] > redlineLevel) hot++; max = Mathf.Max(max, s.effort[i]); }
+      for (int i = 0; i < s.effort.Length; i++) { if (s.effort[i] > redlineLevel) hot++; max = Mathf.Max(max, s.effort[i]); }
       if (race.Phase == RacePhase.Racing) t.peak = Mathf.Max(t.peak, max);
       t.redFor = hot >= redlineJoints ? t.redFor + dt : 0f;
       bool red = t.redFor > redlineSeconds && race.Phase == RacePhase.Racing && r.finishTime < 0;
@@ -92,12 +93,16 @@ public class StrainMonitor : MonoBehaviour {
     }
   }
 
-  /// <summary>Standings suffix: one mark per leg coloured by that leg's hardest-working joint, then REDLINE.</summary>
+  // Actuator groups per standings mark: Go2 = four legs of three joints; Matt (G1 order) = left leg, right leg,
+  // left arm, right arm (the waist is not shown).
+  static readonly (int from, int to)[] DogLimbs = { (0, 3), (3, 6), (6, 9), (9, 12) }, HumanLimbs = { (0, 6), (6, 12), (15, 22), (22, 29) };
+
+  /// <summary>Standings suffix: one mark per limb coloured by that limb's hardest-working joint, then REDLINE.</summary>
   string Marks(Racer r) {
     var s = sensors != null ? sensors.Of(r) : null; if (s == null || r.finishTime >= 0) return "";
     var sb = new System.Text.StringBuilder("  <size=16>");
-    for (int leg = 0; leg < 4; leg++) {
-      float e = Mathf.Max(s.effort[3 * leg], Mathf.Max(s.effort[3 * leg + 1], s.effort[3 * leg + 2]));
+    foreach (var (from, to) in s.effort.Length == Go2Model.Nu ? DogLimbs : HumanLimbs) {
+      float e = 0f; for (int i = from; i < to; i++) e = Mathf.Max(e, s.effort[i]);
       var c = e < 0.7f ? Color.Lerp(new Color(0.3f, 0.85f, 0.35f), Color.yellow, Mathf.InverseLerp(0.45f, 0.7f, e)) : Color.Lerp(Color.yellow, Hot, Mathf.InverseLerp(0.7f, 0.9f, e));
       sb.Append(BroadcastUi.Paint("■", c));
     }

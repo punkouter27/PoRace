@@ -64,9 +64,9 @@ public unsafe class ContactImpulse : MonoBehaviour {
     var root = new Dictionary<int, Racer>(); var robotMass = new Dictionary<Racer, float>();
     for (int i = 0; i < race.Live.Count; i++) _slot[race.Live[i]] = i;
     foreach (var r in race.Live) {
-      var M = r.controller.Model; if (M == null) { _geomRacer = null; return; }
-      root[M.BaseBody] = r; float mass = 0f;
-      for (int b = 0; b < (int)m->nbody; b++) if (m->body_rootid[b] == M.BaseBody) mass += (float)m->body_mass[b];
+      var B = r.Body; if (B == null || !B.Ready) { _geomRacer = null; return; }
+      root[B.BaseBody] = r; float mass = 0f;
+      for (int b = 0; b < (int)m->nbody; b++) if (m->body_rootid[b] == B.BaseBody) mass += (float)m->body_mass[b];
       robotMass[r] = mass;
     }
     for (int g = 0; g < n; g++) {
@@ -80,10 +80,10 @@ public unsafe class ContactImpulse : MonoBehaviour {
       else { _cube[g] = true; _surface[g] = Surface.Cube; _mass[g] = (float)m->body_mass[b]; }
     }
     foreach (var r in race.Live) {
-      var M = r.controller.Model;
-      for (int f = 0; f < 4; f++) {
-        int g = MujocoLib.mj_name2id(m, (int)MujocoLib.mjtObj.mjOBJ_GEOM, M.Prefix + Go2Model.Legs[f]);
-        if (g >= 0) { _geomFoot[g] = f; _mass[g] = footMass; }
+      var feet = r.matt != null ? new[] { "left_foot", "right_foot" } : Array.ConvertAll(Go2Model.Legs, l => r.controller.prefix + l);
+      for (int f = 0; f < feet.Length; f++) {
+        int g = MujocoLib.mj_name2id(m, (int)MujocoLib.mjtObj.mjOBJ_GEOM, feet[f]);
+        if (g >= 0) { _geomFoot[g] = f; _mass[g] = r.matt != null ? footMass * 4f : footMass; }   // effective striking mass: a human foot brings the shank and foot (~5.4 kg for Matt)
       }
     }
   }

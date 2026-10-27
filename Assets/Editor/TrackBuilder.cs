@@ -217,9 +217,11 @@ public static class TrackBuilder {
     // Race wiring: the orchestrator reads the map; racer start transforms follow the grid at arc length 0.
     var race = Object.FindFirstObjectByType<MultiRaceOrchestrator>(FindObjectsInactive.Include);
     race.map = map; EditorUtility.SetDirty(race);
-    var lanes = map.LaneOffsets(race.racers.Count);
+    var lanes = map.LaneOffsets(race.racers.Count(x => x.matt == null));   // dogs; Matt is placed at race start
     for (int k = 0; k < race.racers.Count; k++) {
-      var r = race.racers[k]; var gp = map.LanePoint(0f, lanes[k], out var gt);
+      var r = race.racers[k];
+      if (r.matt != null) continue;   // Matt spawns on the grid from MattController.spawnMj at race start
+      var gp = map.LanePoint(0f, lanes[k], out var gt);
       var baseGo = GameObject.Find(r.controller.prefix + "base");
       if (baseGo != null) { baseGo.transform.SetPositionAndRotation(new Vector3(gp.x, baseGo.transform.position.y, gp.y), Yaw(gt)); }
       if (k > 0 && r.mjRoot == null) r.mjRoot = GameObject.Find("racer" + k);

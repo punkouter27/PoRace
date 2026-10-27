@@ -125,7 +125,6 @@ public static class BroadcastBuilder {
       var arrows = go.AddComponent<IntentArrows>(); arrows.race = race; arrows.lineMaterial = particles;
       var chat = go.AddComponent<ChatLink>(); chat.race = race;
       var hazards = go.AddComponent<HazardDesk>(); hazards.race = race; hazards.chat = chat;
-      var bets = go.AddComponent<Predictions>(); bets.race = race; bets.chat = chat;
       var weather = go.AddComponent<TrackWeather>(); weather.race = race; weather.rainMaterial = particles;
       var replay = go.AddComponent<RaceReplay>(); replay.race = race; replay.director = director; replay.ghostMaterial = ghost;
       var tele = go.AddComponent<RaceTelemetry>(); tele.race = race; tele.sensors = sensors; tele.strain = strain; tele.contacts = contacts;

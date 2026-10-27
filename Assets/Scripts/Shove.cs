@@ -26,10 +26,10 @@ public unsafe class Shove : MonoBehaviour {
   }
 
   /// <summary>Push any robot with the same profile (chat hazards); impulse capped at the trained R2 bar.</summary>
-  public static void PushRobot(Go2Controller robot, Vector3 mjDir, float impulseNs = 30f, int steps = 25) {
-    if (robot == null || robot.Model == null) return;
+  public static void PushRobot(IRacer robot, Vector3 mjDir, float impulseNs = 30f, int steps = 25) {
+    if (robot == null || !robot.Ready) return;
     impulseNs = Mathf.Min(impulseNs, 30f);
-    ExternalForces.Instance.AddPush(robot.Model.BaseBody, mjDir.normalized * (impulseNs / (steps * Go2Controller.SimDt)), steps);
+    ExternalForces.Instance.AddPush(robot.BaseBody, mjDir.normalized * (impulseNs / (steps * Go2Controller.SimDt)), steps);
   }
 
   public void PushRandom() {

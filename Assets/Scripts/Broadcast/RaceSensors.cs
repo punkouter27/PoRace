@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Mujoco;
 using UnityEngine;
 
@@ -15,16 +16,22 @@ public unsafe class RaceSensors : MonoBehaviour {
   public float effortTau = 0.15f;
 
   public class State {
-    public readonly float[] effort = new float[Go2Model.Nu];   // 0..1 of forcerange, smoothed
+    public readonly float[] effort;                            // per actuator, 0..1 of its forcerange, smoothed
     public float power, speed, energy, mass;                   // W, m/s, J, kg
     public Vector3 velocity;                                   // MuJoCo frame
-    public readonly bool[] down = new bool[4];
+    public readonly bool[] down;
     public int strikes;
-    internal readonly int[] footGeom = new int[4];
-    internal readonly bool[] now = new bool[4];
+    internal readonly int[] footGeom, act, dof;
+    internal readonly float[] forceMax;
+    internal readonly bool[] now;
+    internal int baseDof;
+    public State(int actuators, int feet) {
+      effort = new float[actuators]; act = new int[actuators]; dof = new int[actuators]; forceMax = new float[actuators];
+      down = new bool[feet]; now = new bool[feet]; footGeom = new int[feet];
+    }
   }
 
-  /// <summary>(racer, foot 0..3 FL FR RL RR, Unity position, base speed m/s).</summary>
+  /// <summary>(racer, foot index (Go2: 0..3 FL FR RL RR; Matt: 0..1 L R), Unity position, base speed m/s).</summary>
   public event Action<Racer, int, Vector3, float> FootStrike;
   /// <summary>(cube index, Unity position, speed lost m/s, racer hit or null).</summary>
   public event Action<int, Vector3, float, Racer> CubeImpact;
@@ -43,11 +50,26 @@ public unsafe class RaceSensors : MonoBehaviour {
   void OnDestroy() { if (MjScene.InstanceExists) MjScene.Instance.postUpdateEvent -= OnPostStep; }
 
   void Init(MujocoLib.mjModel_* m) {
+    int Id(MujocoLib.mjtObj t, string n) => MujocoLib.mj_name2id(m, (int)t, n);
     foreach (var r in race.Live) {
-      var M = r.controller.Model; if (M == null) return;
-      var s = new State();
-      for (int f = 0; f < 4; f++) s.footGeom[f] = MujocoLib.mj_name2id(m, (int)MujocoLib.mjtObj.mjOBJ_GEOM, M.Prefix + Go2Model.Legs[f]);
-      for (int b = 0; b < (int)m->nbody; b++) if (m->body_rootid[b] == M.BaseBody) s.mass += (float)m->body_mass[b];
+      var B = r.Body; if (B == null || !B.Ready) { _s.Clear(); return; }
+      State s;
+      if (r.matt == null) {
+        var M = r.controller.Model;
+        s = new State(Go2Model.Nu, 4);
+        for (int i = 0; i < Go2Model.Nu; i++) { s.act[i] = M.ActId[i]; s.dof[i] = M.JointDof[i]; s.forceMax[i] = ForceRange; }
+        for (int f = 0; f < 4; f++) s.footGeom[f] = Id(MujocoLib.mjtObj.mjOBJ_GEOM, M.Prefix + Go2Model.Legs[f]);
+      } else {
+        s = new State(MattSpec.Nu, 2);
+        for (int i = 0; i < MattSpec.Nu; i++) {
+          s.act[i] = Id(MujocoLib.mjtObj.mjOBJ_ACTUATOR, MattSpec.Joints[i]);
+          s.dof[i] = m->jnt_dofadr[Id(MujocoLib.mjtObj.mjOBJ_JOINT, MattSpec.Joints[i])];
+          s.forceMax[i] = MattSpec.ForceMax[i];
+        }
+        s.footGeom[0] = Id(MujocoLib.mjtObj.mjOBJ_GEOM, "left_foot"); s.footGeom[1] = Id(MujocoLib.mjtObj.mjOBJ_GEOM, "right_foot");
+      }
+      s.baseDof = B.BaseDof;
+      for (int b = 0; b < (int)m->nbody; b++) if (m->body_rootid[b] == B.BaseBody) s.mass += (float)m->body_mass[b];
       _s[r] = s;
     }
   }
@@ -60,30 +82,30 @@ public unsafe class RaceSensors : MonoBehaviour {
     float k = 1f - Mathf.Exp(-dt / effortTau);
 
     foreach (var kv in _s) {
-      var r = kv.Key; var s = kv.Value; var M = r.controller.Model;
+      var s = kv.Value;
       float p = 0f;
-      for (int i = 0; i < Go2Model.Nu; i++) {
-        float tau = (float)d->actuator_force[M.ActId[i]];
-        s.effort[i] += (Mathf.Min(1f, Mathf.Abs(tau) / ForceRange) - s.effort[i]) * k;
-        p += Mathf.Abs(tau * (float)d->qvel[M.JointDof[i]]);
+      for (int i = 0; i < s.effort.Length; i++) {
+        float tau = (float)d->actuator_force[s.act[i]];
+        s.effort[i] += (Mathf.Min(1f, Mathf.Abs(tau) / s.forceMax[i]) - s.effort[i]) * k;
+        p += Mathf.Abs(tau * (float)d->qvel[s.dof[i]]);
       }
       s.power = p; s.energy += p * dt;
-      s.velocity = new Vector3((float)d->qvel[M.BaseDof], (float)d->qvel[M.BaseDof + 1], (float)d->qvel[M.BaseDof + 2]);
+      s.velocity = new Vector3((float)d->qvel[s.baseDof], (float)d->qvel[s.baseDof + 1], (float)d->qvel[s.baseDof + 2]);
       s.speed = new Vector2(s.velocity.x, s.velocity.y).magnitude;
     }
 
     // Foot contacts with world geoms (body 0), one pass over the contact list.
-    foreach (var s in _s.Values) for (int f = 0; f < 4; f++) s.now[f] = false;
+    foreach (var s in _s.Values) for (int f = 0; f < s.now.Length; f++) s.now[f] = false;
     for (int i = 0; i < d->ncon; i++) {
       int g1 = d->contact[i].geom1, g2 = d->contact[i].geom2;
       bool w1 = m->geom_bodyid[g1] == 0, w2 = m->geom_bodyid[g2] == 0;
       if (!(w1 ^ w2)) continue;
       int foot = w1 ? g2 : g1;
-      foreach (var s in _s.Values) for (int f = 0; f < 4; f++) if (s.footGeom[f] == foot) s.now[f] = true;
+      foreach (var s in _s.Values) for (int f = 0; f < s.footGeom.Length; f++) if (s.footGeom[f] == foot) s.now[f] = true;
     }
     foreach (var kv in _s) {
       var s = kv.Value;
-      for (int f = 0; f < 4; f++) {
+      for (int f = 0; f < s.now.Length; f++) {
         bool now = s.now[f];
         if (now && !s.down[f]) {
           s.strikes++;
@@ -95,7 +117,8 @@ public unsafe class RaceSensors : MonoBehaviour {
     }
 
     // Cube impacts: a cube that lost more than 1.5 m/s since the last control step hit something.
-    var any = race.Live[0].controller.Model;
+    var dog = race.Live.FirstOrDefault(x => x.matt == null); if (dog == null) return;   // the cube pool lives in the dogs' model part
+    var any = dog.controller.Model;
     for (int c = 0; c < Go2Model.NumCubes; c++) {
       int v = any.CubeDof[c], q = any.CubeQpos[c];
       var vel = new Vector3((float)d->qvel[v], (float)d->qvel[v + 1], (float)d->qvel[v + 2]);
@@ -104,7 +127,7 @@ public unsafe class RaceSensors : MonoBehaviour {
       var mj = new Vector3((float)d->qpos[q], (float)d->qpos[q + 1], (float)d->qpos[q + 2]);
       Racer hit = null; float best = 0.6f;
       foreach (var r in race.Live) {
-        var M = r.controller.Model; float dx = (float)d->qpos[M.BaseQpos] - mj.x, dy = (float)d->qpos[M.BaseQpos + 1] - mj.y;
+        var B = r.Body; float dx = (float)d->qpos[B.BaseQpos] - mj.x, dy = (float)d->qpos[B.BaseQpos + 1] - mj.y;
         float dist = Mathf.Sqrt(dx * dx + dy * dy); if (dist < best) { best = dist; hit = r; }
       }
       CubeImpact?.Invoke(c, new Vector3(mj.x, mj.z, mj.y), lost, hit);

@@ -117,9 +117,9 @@ public unsafe class TrackWeather : MonoBehaviour {
     float to = (WindFromDeg + 180f) * Mathf.Deg2Rad;
     var dir = new Vector3(Mathf.Sin(to), Mathf.Cos(to), 0f);
     foreach (var r in race.Live) {
-      if (r.controller.Model == null) continue;
+      if (!r.Body.Ready) continue;
       float gust = 0.7f + 0.6f * Mathf.PerlinNoise(Time.time * 0.3f, r.lane * 3.1f);
-      ExternalForces.Instance.SetSteady(r.controller.Model.BaseBody, r.finishTime < 0 ? dir * WindForce() * gust : Vector3.zero);
+      ExternalForces.Instance.SetSteady(r.Body.BaseBody, r.finishTime < 0 ? dir * WindForce() * gust : Vector3.zero);
     }
   }
 

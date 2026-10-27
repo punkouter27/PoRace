@@ -34,11 +34,13 @@ from mujoco_playground.config import locomotion_params
 from tensorboardX import SummaryWriter
 
 from g1 import env as g1env
+from matt import env as mattenv
 from go2 import getup, joystick, randomize
 
 ENVS = {"joystick": (joystick.Joystick, joystick.default_config, "Go1JoystickFlatTerrain"),
         "getup": (getup.Getup, getup.default_config, "Go1Getup"),
-        "g1": (g1env.G1Joystick, g1env.default_config, "G1JoystickFlatTerrain")}
+        "g1": (g1env.G1Joystick, g1env.default_config, "G1JoystickFlatTerrain"),
+        "matt": (mattenv.MattJoystick, mattenv.default_config, "G1JoystickFlatTerrain")}
 
 
 CONTACTS_PER_ENV = 30  # full-collision Go2 lying on the floor; fewer drops contacts and bodies sink
@@ -49,7 +51,7 @@ def make_env(name, pert=False, cubes=False, num_worlds=8192, kick_max=None, vx_m
   cfg = cfg_fn()
   # naconmax is a TOTAL across worlds. Size it to the worlds this env instance really runs, otherwise the
   # 128-world eval env allocates the same buffers as the training env and the 12 GB GPU spills or OOMs.
-  cfg.naconmax = (8 if name == "g1" else CONTACTS_PER_ENV) * num_worlds   # G1: only feet collide
+  cfg.naconmax = {"g1": 8, "matt": mattenv.CONTACTS_PER_ENV}.get(name, CONTACTS_PER_ENV) * num_worlds   # G1: only feet collide; Matt: full self-collision
   if name == "getup":
     cfg.pert_config.enable = pert
     cfg.cube_config.enable = cubes

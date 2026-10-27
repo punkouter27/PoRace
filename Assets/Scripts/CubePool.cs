@@ -39,20 +39,20 @@ public unsafe class CubePool : MonoBehaviour {
     return k;
   }
 
-  Vector3 BasePos(Go2Controller robot = null) {
-    var d = MjScene.Instance.Data; int q = (robot != null ? robot : controller).Model.BaseQpos;
+  Vector3 BasePos(IRacer robot = null) {
+    var d = MjScene.Instance.Data; int q = robot != null ? robot.BaseQpos : controller.Model.BaseQpos;
     return new Vector3((float)d->qpos[q], (float)d->qpos[q + 1], (float)d->qpos[q + 2]);
   }
 
   /// <summary>Drop a cube from 1 m above the base with a small random horizontal offset (training C.2).
   /// `robot` picks any racer sharing the model (the cubes are shared); null = this pool's controller.</summary>
-  public int DropOnRobot(Go2Controller robot = null) {
+  public int DropOnRobot(IRacer robot = null) {
     var o = Random.insideUnitCircle * 0.15f;
     return Fire(BasePos(robot) + new Vector3(o.x, o.y, 1.0f), Vector3.zero);
   }
 
   /// <summary>Throw a cube at the base from a random horizontal direction, 2 m away.</summary>
-  public int ThrowAtRobot(float speed = 3f, Go2Controller robot = null) {
+  public int ThrowAtRobot(float speed = 3f, IRacer robot = null) {
     float ang = Random.Range(0f, Mathf.PI * 2f);
     var dir = new Vector3(Mathf.Cos(ang), Mathf.Sin(ang), 0f);
     var pos = BasePos(robot) - dir * 2f; pos.z += 0.2f;

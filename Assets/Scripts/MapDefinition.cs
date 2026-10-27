@@ -146,6 +146,22 @@ public static class MapRegistry {
 /// <summary>Choices made on the pre-race screen, carried across the scene load. Defaults give a full grid.</summary>
 public static class RaceConfig {
   public static int racers = 4;
+  public static bool matt = false;          // Matt (the human racer) on the grid; flat maps only
+  // Self-running app: launch straight into a race, then race after race (MultiRaceOrchestrator). Off after the player
+  // presses Menu, or when started with -menu.
+  public static bool autoplay = !System.Array.Exists(System.Environment.GetCommandLineArgs(), a => a == "-menu");
+  public static int autoplayMap = -1;       // index into the flat maps of MapRegistry; -1 = not started yet
+
+  /// <summary>Next race of the self-running app: the flat maps in turn (Matt races on flat ground only), four dogs and
+  /// Matt, a fresh seed. Light on the GPU: Mobile graphics tier (GfxTier) and 30 fps.</summary>
+  public static void LaunchNextAutoplay() {
+    var flat = System.Array.FindAll(MapRegistry.All(), m => m.terrain == "flat");
+    if (flat.Length == 0) return;
+    autoplayMap = (autoplayMap + 1) % flat.Length;
+    racers = 4; laps = 0; seed = -1; fromMenu = true; matt = true;
+    QualitySettings.vSyncCount = 0; Application.targetFrameRate = 30;
+    UnityEngine.SceneManagement.SceneManager.LoadScene(flat[autoplayMap].sceneName);
+  }
   public static int laps = 0;        // 0 = the map's default
   public static int seed = -1;       // -1 = different every race
   public static bool fromMenu = false;

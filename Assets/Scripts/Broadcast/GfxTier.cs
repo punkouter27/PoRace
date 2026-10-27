@@ -10,7 +10,7 @@ public static class GfxTier {
   public static bool Mobile {
     get {
       if (_mobile == null) {
-        _mobile = Application.isMobilePlatform;
+        _mobile = Application.isMobilePlatform || RaceConfig.autoplay;   // the self-running app keeps the GPU light
         var args = System.Environment.GetCommandLineArgs();
         for (int i = 0; i + 1 < args.Length; i++) if (args[i] == "-gfx") _mobile = args[i + 1] == "mobile";
         if (_mobile.Value && !Application.isMobilePlatform) {

@@ -50,11 +50,18 @@ public class Hud : MonoBehaviour {
   public RaceOrchestrator race;
   public MultiRaceOrchestrator multiRace;
   public void OnReset() { if (multiRace != null) multiRace.Restart(); else if (race != null) race.Restart(); else controller.ResetToHome(); }
-  public void OnShove() { if (multiRace != null) shove.target = multiRace.Leader().controller; shove.PushRandom(); }
-  public void OnCube() => cubes.ThrowAtRobot(3f, multiRace != null ? multiRace.Leader().controller : null);
-  public void OnDrop() => cubes.DropOnRobot(multiRace != null ? multiRace.Leader().controller : null);
+  public void OnShove() {
+    if (multiRace != null) {
+      var l = multiRace.Leader();
+      if (l.matt != null) { float a = Random.Range(0f, Mathf.PI * 2f); Shove.PushRobot(l.Body, new Vector3(Mathf.Cos(a), Mathf.Sin(a), 0f)); return; }
+      shove.target = l.controller;
+    }
+    shove.PushRandom();
+  }
+  public void OnCube() => cubes.ThrowAtRobot(3f, multiRace != null ? multiRace.Leader().Body : null);
+  public void OnDrop() => cubes.DropOnRobot(multiRace != null ? multiRace.Leader().Body : null);
   public void OnMode(int m) => controller.mode = (Go2Mode)m;
-  public void OnMenu() { if (Application.CanStreamedLevelBeLoaded("Menu")) UnityEngine.SceneManagement.SceneManager.LoadScene("Menu"); }
+  public void OnMenu() { RaceConfig.autoplay = false; if (Application.CanStreamedLevelBeLoaded("Menu")) UnityEngine.SceneManagement.SceneManager.LoadScene("Menu"); }
 
   // Behaviour selector (TR). All presets only change the command / mode or write MuJoCo state.
   void Go(Vector3 cmd) { controller.mode = Go2Mode.Locomotion; controller.command = cmd; }
@@ -62,7 +69,7 @@ public class Hud : MonoBehaviour {
   public void OnWalk() => Go(new Vector3(1.0f, 0f, 0f));
   public void OnRun() => Go(new Vector3(1.5f, 0f, 0f));
   public void OnTurn() => Go(new Vector3(0.6f, 0f, 0.8f));
-  public void OnKnockOver() { if (multiRace != null) multiRace.Leader().controller.KnockOver(); else controller.KnockOver(); }
+  public void OnKnockOver() { if (multiRace != null) multiRace.Leader().Body.KnockOver(); else controller.KnockOver(); }
 }
 
 }

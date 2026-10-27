@@ -8,15 +8,18 @@ namespace PoRace {
 /// <summary>Pre-race screen (PRD 4.1): pick a map discovered by MapRegistry, the number of racers (capped by the
 /// map's grid) and the laps, then launch. Headless: PoRace.exe -batchmode -nographics -menuMap 1 -raceTest ...</summary>
 public class MenuController : MonoBehaviour {
-  public Text mapText, infoText, racersText, lapsText, weatherText;
+  public Text mapText, infoText, racersText, lapsText, weatherText, mattText;
   public InputField chatInput;
-  MapDefinition[] _maps; int _i, _racers = 4, _laps = 1, _weather;
+  MapDefinition[] _maps; int _i, _racers = 4, _laps = 1, _weather; bool _matt;
 
   void Start() {
     _maps = MapRegistry.All();
     if (_maps.Length == 0) { if (mapText) mapText.text = "No maps in Resources/Maps"; return; }
+    var a = Environment.GetCommandLineArgs();
+    if (RaceConfig.autoplay && !Array.Exists(a, s => s == "-menuMap") && !Array.Exists(a, s => s == "-raceTest")) { RaceConfig.LaunchNextAutoplay(); return; }
     _racers = RaceConfig.fromMenu ? RaceConfig.racers : 4;
     _weather = PlayerPrefs.GetInt("PoRace.weatherCity", 0);
+    _matt = PlayerPrefs.GetInt("PoRace.matt", 0) == 1;
     if (chatInput) chatInput.text = PlayerPrefs.GetString("PoRace.twitch", "");
     SelectMap(0);
     var args = Environment.GetCommandLineArgs();
@@ -37,6 +40,8 @@ public class MenuController : MonoBehaviour {
         + $"{(m.closed ? "circuit" : "point to point")}   grid {m.gridSlots}   map {_i + 1} of {_maps.Length}";
     if (racersText) racersText.text = _racers.ToString();
     if (lapsText) lapsText.text = m.closed ? _laps.ToString() : "-";
+    // Matt (the human racer, roster Creature02): flat maps only, his policy never trained on banks or obstacles
+    if (mattText) mattText.text = m.terrain != "flat" ? "Matt: flat only" : _matt ? "Matt: IN" : "+ Matt";
     if (weatherText) weatherText.text = _weather >= 0 && _weather < TrackWeather.Cities.Length ? "live: " + TrackWeather.Cities[_weather].name : "off";
   }
 
@@ -44,6 +49,7 @@ public class MenuController : MonoBehaviour {
   public void OnWeatherNext() { _weather = _weather + 1 >= TrackWeather.Cities.Length ? -1 : _weather + 1; Refresh(); }
   public void OnWeatherPrev() { _weather = _weather - 1 < -1 ? TrackWeather.Cities.Length - 1 : _weather - 1; Refresh(); }
 
+  public void OnMattToggle() { if (_maps[_i].terrain == "flat") _matt = !_matt; Refresh(); }
   public void OnNextMap() => SelectMap(_i + 1);
   public void OnPrevMap() => SelectMap(_i - 1);
   public void OnRacersUp() { _racers = Mathf.Min(_racers + 1, _maps[_i].gridSlots); Refresh(); }
@@ -54,6 +60,7 @@ public class MenuController : MonoBehaviour {
   public void OnLaunch() {
     RaceConfig.racers = _racers; RaceConfig.laps = _laps; RaceConfig.seed = -1; RaceConfig.fromMenu = true;
     RaceConfig.weatherCity = _weather; RaceConfig.twitchChannel = chatInput ? chatInput.text.Trim() : "";
+    RaceConfig.matt = _matt && _maps[_i].terrain == "flat"; PlayerPrefs.SetInt("PoRace.matt", _matt ? 1 : 0);
     PlayerPrefs.SetInt("PoRace.weatherCity", _weather); PlayerPrefs.SetString("PoRace.twitch", RaceConfig.twitchChannel); PlayerPrefs.Save();
     SceneManager.LoadScene(_maps[_i].sceneName);
   }

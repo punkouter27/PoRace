@@ -9,13 +9,15 @@ namespace PoRace {
 public static unsafe class ModelCheck {
   const double Eps = 1e-6;
 
-  public static void Assert(MujocoLib.mjModel_* m, Go2Model M, int robots = 1) {
-    int nq = 19 * robots + 28, nv = 18 * robots + 24, nu = 12 * robots;  // + 4 pooled cubes
-    Check((int)m->nq == nq && (int)m->nv == nv && (int)m->nu == nu, $"sizes nq={m->nq} nv={m->nv} nu={m->nu}, want {nq}/{nv}/{nu} for {robots} robot(s)");
+  public static void Assert(MujocoLib.mjModel_* m, Go2Model M, int robots = 1, int matts = 0) {
+    int nq = 19 * robots + 28 + matts * (7 + MattSpec.Nu), nv = 18 * robots + 24 + matts * (6 + MattSpec.Nu);  // + 4 pooled cubes
+    int nu = 12 * robots + matts * MattSpec.Nu;
+    Check((int)m->nq == nq && (int)m->nv == nv && (int)m->nu == nu, $"sizes nq={m->nq} nv={m->nv} nu={m->nu}, want {nq}/{nv}/{nu} for {robots} robot(s) + {matts} Matt");
     Check(Math.Abs(m->opt.timestep - 0.004) < 1e-9, $"timestep {m->opt.timestep} != 0.004 (set Time.fixedDeltaTime)");
     Check(m->opt.integrator == (int)MujocoLib.mjtIntegrator.mjINT_EULER, "integrator != Euler");
     Check(m->opt.cone == (int)MujocoLib.mjtCone.mjCONE_PYRAMIDAL, "cone != pyramidal");
-    Check(Math.Abs(m->opt.impratio - 100) < Eps, $"impratio {m->opt.impratio}");
+    double imp = matts > 0 ? MattSpec.ImpRatio : 100;   // a race with Matt runs the shared model at his contact contract
+    Check(Math.Abs(m->opt.impratio - imp) < 1e-5, $"impratio {m->opt.impratio}, want {imp}");
     Check(m->opt.iterations == 1 && m->opt.ls_iterations == 5, $"iterations {m->opt.iterations} ls {m->opt.ls_iterations}");
     Check((m->opt.disableflags & (int)MujocoLib.mjtDisableBit.mjDSBL_EULERDAMP) != 0, "eulerdamp not disabled");
     Check(Math.Abs(m->opt.gravity[2] + 9.81) < 1e-6 && Math.Abs(m->opt.gravity[0]) < Eps && Math.Abs(m->opt.gravity[1]) < Eps,

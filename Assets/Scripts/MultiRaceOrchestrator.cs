@@ -12,6 +12,10 @@ namespace PoRace {
 public class Racer {
   public string name = "Racer";
   public Go2Controller controller;
+  [Tooltip("Set instead of `controller` for Matt (the human racer, MattController).")]
+  public MattController matt;
+  /// <summary>The racing body, whichever creature it is.</summary>
+  public IRacer Body => matt != null ? (IRacer)matt : controller;
   public AutoReset autoReset;
   [Tooltip("Root of this racer's MuJoCo subtree. Null for the first racer, which is always present.")]
   public GameObject mjRoot;
@@ -83,27 +87,37 @@ public unsafe class MultiRaceOrchestrator : MonoBehaviour {
   Transform _anchor; Vector3 _camForward = Vector3.right;
 
   void Awake() {
-    int n = Mathf.Clamp(RaceConfig.fromMenu ? RaceConfig.racers : racers.Count, 1, racers.Count);
+    int dogs = racers.Count(r => r.matt == null);
+    int n = Mathf.Clamp(RaceConfig.fromMenu ? RaceConfig.racers : dogs, 1, dogs);
+    bool matt = RaceConfig.fromMenu && RaceConfig.matt;
     int laps = RaceConfig.fromMenu ? RaceConfig.laps : 0; int seed = RaceConfig.fromMenu ? RaceConfig.seed : -1;
     var args = Environment.GetCommandLineArgs();
     for (int i = 0; i < args.Length; i++) {
       if (args[i] == "-raceTest") _test = true;
       if (args[i] == "-noTactics") tactics = false;   // fixed lanes, as before tactics existed (regression runs)
+      if (args[i] == "-matt") matt = true;
       if (i + 1 >= args.Length) continue;
       if (args[i] == "-timeScale") Time.timeScale = float.Parse(args[i + 1], CultureInfo.InvariantCulture);
       if (args[i] == "-raceFlipAt") _flipAt = double.Parse(args[i + 1], CultureInfo.InvariantCulture);
       if (args[i] == "-seed") seed = int.Parse(args[i + 1]);
-      if (args[i] == "-racers") n = Mathf.Clamp(int.Parse(args[i + 1]), 1, racers.Count);
+      if (args[i] == "-racers") n = Mathf.Clamp(int.Parse(args[i + 1]), 1, dogs);
       if (args[i] == "-laps") laps = int.Parse(args[i + 1]);
     }
     Laps = map.closed ? Mathf.Clamp(laps > 0 ? laps : map.defaultLaps, 1, 5) : 1;
     _total = map.Length * Laps;
     Seed = seed >= 0 ? seed : Environment.TickCount & 0xFFFF;
+    // Matt's policy is trained on flat ground only (training/matt/env.py): no banks, no obstacles.
+    if (matt && map.terrain != "flat") { Debug.Log($"[Race] Matt sits out {map.displayName} ({map.terrain}): flat-ground policy"); matt = false; }
+    // One MuJoCo model for all racers. Matt trained at impratio 1 (at the dogs' 100 a 90 kg body's floor forces explode,
+    // rl_optimization_log.md); with him on the grid the shared model compiles at 1, the dogs' gates at 1: R0 / R2 10/10,
+    // R1 9/10. Dogs-only races keep 100.
+    if (matt) { var gs = MjGlobalSettings.Instance; var o = gs.GlobalOptions; o.ImpRatio = MattSpec.ImpRatio; gs.GlobalOptions = o; }
 
-    // Racers beyond the chosen count are removed from the MuJoCo model before MjScene compiles it (in Start).
-    for (int i = 0; i < racers.Count; i++) {
-      racers[i].active = i < n;
-      if (i >= n) { if (racers[i].mjRoot != null) racers[i].mjRoot.SetActive(false); racers[i].controller.gameObject.SetActive(false); }
+    // Racers not on the grid are removed from the MuJoCo model before MjScene compiles it (in Start): the first n dogs
+    // race, Matt joins when picked on the roster (-matt).
+    for (int i = 0, k = 0; i < racers.Count; i++) {
+      racers[i].active = racers[i].matt != null ? matt : k++ < n;
+      if (!racers[i].active) { if (racers[i].mjRoot != null) racers[i].mjRoot.SetActive(false); racers[i].Body.gameObject.SetActive(false); }
     }
     _live = racers.Where(r => r.active).ToList();
     Draw();
@@ -136,15 +150,15 @@ public unsafe class MultiRaceOrchestrator : MonoBehaviour {
     float lateral = Vector2.Dot(p - map.PointAt(s, out _), MapDefinition.Left(t)), bank = Mathf.Abs(map.BankAt(s)) * Mathf.Deg2Rad;
     // Obstacles (steeplechase): spawn 10 cm above the tallest block under the stance and drop onto it, as in training.
     float block = map.ObstacleHeightAt(p, 0.45f); if (block > 0f) block += 0.1f;
-    r.controller.spawnMj = new Vector3(p.x, p.y, Go2Controller.HomeHeight + map.SurfaceHeight(s, lateral) + 0.2f * Mathf.Tan(bank) + block);
-    r.controller.spawnYaw = Mathf.Atan2(t.y, t.x);
+    r.Body.SpawnMj = new Vector3(p.x, p.y, r.Body.HomeHeight + map.SurfaceHeight(s, lateral) + 0.2f * Mathf.Tan(bank) + block);
+    r.Body.SpawnYaw = Mathf.Atan2(t.y, t.x);
   }
 
   public void Restart() {
-    Phase = RacePhase.Countdown; _t0 = -1; RaceTime = 0; _finished = 0; Bumps = 0; BumpSteps = 0;
+    Phase = RacePhase.Countdown; _t0 = -1; RaceTime = 0; _finished = 0; Bumps = 0; BumpSteps = 0; _firstFinish = -1; _overFor = 0;
     Seed = (Seed * 1103515245 + 12345) & 0xFFFF;   // a new draw each restart
     Draw();
-    foreach (var r in _live) { r.controller.mode = Go2Mode.Locomotion; r.controller.command = Vector3.zero; r.controller.ResetToHome(); }
+    foreach (var r in _live) { r.Body.StartLocomotion(); r.Body.ResetToHome(); }
     Restarted?.Invoke(); PhaseChanged?.Invoke(Phase);
   }
 
@@ -167,18 +181,18 @@ public unsafe class MultiRaceOrchestrator : MonoBehaviour {
   void OnPostStep(object sender, MjStepArgs a) {
     double ms = _sw.Elapsed.TotalMilliseconds;
     var d = a.data; double t = d->time; _sim = t;
-    if (_live.Count == 0 || _live[0].controller.Model == null) return;
+    if (_live.Count == 0 || _live.Any(r => !r.Body.Ready)) return;
     if (t > 1.0) { _stepMs += ms; _steps++; if (ms > _maxMs) _maxMs = ms; }
     if (_t0 < 0) _t0 = t;
 
     if (Phase == RacePhase.Countdown && t - _t0 >= countdownSeconds) { Phase = RacePhase.Racing; _raceStart = t; PhaseChanged?.Invoke(Phase); }
     if (Phase == RacePhase.Racing) RaceTime = t - _raceStart;
-    if (Phase == RacePhase.Racing && _flipAt >= 0 && RaceTime >= _flipAt) { _flipAt = -1; Leader().controller.KnockOver(); _flips++; }
+    if (Phase == RacePhase.Racing && _flipAt >= 0 && RaceTime >= _flipAt) { _flipAt = -1; Leader().Body.KnockOver(); _flips++; }
 
     foreach (var r in _live) {
-      var M = r.controller.Model; var c = r.controller;
-      var pos = new Vector2((float)d->qpos[M.BaseQpos], (float)d->qpos[M.BaseQpos + 1]);
-      double qw = d->qpos[M.BaseQpos + 3], qx = d->qpos[M.BaseQpos + 4], qy = d->qpos[M.BaseQpos + 5], qz = d->qpos[M.BaseQpos + 6];
+      var c = r.Body;
+      var pos = new Vector2((float)d->qpos[c.BaseQpos], (float)d->qpos[c.BaseQpos + 1]);
+      double qw = d->qpos[c.BaseQpos + 3], qx = d->qpos[c.BaseQpos + 4], qy = d->qpos[c.BaseQpos + 5], qz = d->qpos[c.BaseQpos + 6];
       float yaw = (float)Math.Atan2(2 * (qw * qz + qx * qy), 1 - 2 * (qy * qy + qz * qz));
       var was = r.state;
       r.state = r.autoReset != null ? r.autoReset.State : RaceState.RACING;
@@ -186,11 +200,18 @@ public unsafe class MultiRaceOrchestrator : MonoBehaviour {
         if (r.state == RaceState.FALLEN_RECOVERING && was != RaceState.FALLEN_RECOVERING) { r.falls++; Fell?.Invoke(r); }
         if (r.state == RaceState.RACING && was == RaceState.FALLEN_RECOVERING) Recovered?.Invoke(r);
       }
-      if (Phase == RacePhase.Countdown || r.finishTime >= 0) { c.command = Vector3.zero; continue; }
+      if (Phase == RacePhase.Countdown && r.matt != null) {
+        // Matt's policy marches in place on a zero command and drifts 15-60 deg left in 3 s (training/matt/probe_stand.py):
+        // hold his heading along the track through the countdown instead, so he starts pointing the right way.
+        map.PointAt(0f, out var t0);
+        float e0 = Mathf.DeltaAngle(yaw * Mathf.Rad2Deg, Mathf.Atan2(t0.y, t0.x) * Mathf.Rad2Deg) * Mathf.Deg2Rad;
+        c.Command = new Vector3(0f, 0f, Mathf.Clamp(steerGain * e0, -0.8f, 0.8f)); continue;
+      }
+      if (Phase == RacePhase.Countdown || r.finishTime >= 0) { c.Command = Vector3.zero; continue; }
 
       float dist = Progress(r, pos, out float lateral);
       r.distance = Mathf.Min(dist, _total); r.lateral = lateral;
-      if (dist >= _total) { r.finishTime = RaceTime; r.place = ++_finished; c.command = Vector3.zero; Finished?.Invoke(r); continue; }
+      if (dist >= _total) { r.finishTime = RaceTime; r.place = ++_finished; c.Command = Vector3.zero; Finished?.Invoke(r); continue; }
       int cp = Mathf.FloorToInt(dist / map.checkpointSpacing);
       if (cp > r.checkpoint) { r.checkpoint = cp; Spawn(r, cp * map.checkpointSpacing); }
 
@@ -205,10 +226,13 @@ public unsafe class MultiRaceOrchestrator : MonoBehaviour {
       // Small sideways step toward the chosen line (body frame ~ track frame while the heading error is small).
       float latErr = line + r.offset - lateral;
       float latCmd = tactics && !banked && Mathf.Abs(latErr) > 0.1f && Mathf.Abs(err) < 0.5f ? Mathf.Clamp(latErr, -maxLateralCmd, maxLateralCmd) : 0f;
-      c.command = new Vector3(r.speed * Mathf.Max(0.3f, Mathf.Cos(err)), latCmd, Mathf.Clamp(steerGain * err, -1.2f, 1.2f));
+      // Yaw-rate envelope: the dogs trained to 1.2 rad/s, Matt to 1.0 and was graduated on 0.8 (training/matt/sim.py).
+      float yawMax = r.matt != null ? 0.8f : 1.2f;
+      c.Command = new Vector3(r.speed * Mathf.Max(0.3f, Mathf.Cos(err)), latCmd, Mathf.Clamp(steerGain * err, -yawMax, yawMax));
       // Un-stick: upright, asked to go fast, but (nearly) stopped for half a second -> restart the command ramp.
-      float vx = (float)d->qvel[M.BaseDof], vy = (float)d->qvel[M.BaseDof + 1];
-      bool stuck = c.Active == Go2Mode.Locomotion && c.FilteredCommand.x > 1.0f && vx * vx + vy * vy < 0.3f * 0.3f;
+      float vx = (float)d->qvel[c.BaseDof], vy = (float)d->qvel[c.BaseDof + 1];
+      // Dogs only: the Go2 policy braces when asked for >= 1.3 m/s from rest; Matt (slow to accelerate) would be reset forever.
+      bool stuck = r.matt == null && c.Locomoting && c.FilteredCommand.x > 1.0f && vx * vx + vy * vy < 0.3f * 0.3f;
       r.stuckFor = stuck ? r.stuckFor + Go2Controller.SimDt : 0f;
       if (r.stuckFor > 0.5f) {
         c.RestartCommandRamp(); r.stuckFor = 0f; r.unsticks++;
@@ -217,7 +241,7 @@ public unsafe class MultiRaceOrchestrator : MonoBehaviour {
         r.unstickChain = dist - r.unstickDist < 0.3f ? r.unstickChain + 1 : 1; r.unstickDist = dist;
         if (r.unstickChain >= 6) { r.backoff = 1.2f; r.unstickChain = 0; r.backoffs++; }
       }
-      if (r.backoff > 0f) { r.backoff -= Go2Controller.SimDt; c.command = new Vector3(-0.5f, 0f, Mathf.Clamp(steerGain * err, -1.2f, 1.2f)); }
+      if (r.backoff > 0f) { r.backoff -= Go2Controller.SimDt; c.Command = new Vector3(-0.5f, 0f, Mathf.Clamp(steerGain * err, -1.2f, 1.2f)); }
       if (Mathf.Abs(lateral) > map.halfWidth + 1f) c.ResetToHome();   // left the track: back to the last checkpoint
     }
     if (Phase == RacePhase.Racing) DetectOvertakes();
@@ -311,12 +335,28 @@ public unsafe class MultiRaceOrchestrator : MonoBehaviour {
     }
   }
 
-  bool IsRobotRoot(int body) { foreach (var r in _live) if (r.controller.Model.BaseBody == body) return true; return false; }
+  bool IsRobotRoot(int body) { foreach (var r in _live) if (r.Body.BaseBody == body) return true; return false; }
   List<Racer> Standings() => _live.OrderByDescending(r => r.finishTime >= 0 ? 1e6f - (float)r.finishTime : r.distance).ToList();
   public Racer Leader() { var s = Standings(); return s.FirstOrDefault(r => r.finishTime < 0) ?? s[0]; }
 
+  double _firstFinish = -1; float _overFor;
+
+  /// <summary>Self-running app (RaceConfig.autoplay): a race ends when everyone is home, 45 s after the winner, or at
+  /// 5 minutes (Matt cannot finish yet); 6 s later the next race loads.</summary>
+  void AutoplayNext() {
+    if (!RaceConfig.autoplay || _test) return;
+    // 30 fps cap: re-applied here because the Mobile quality level (GfxTier) switches vsync back on when it loads
+    if (QualitySettings.vSyncCount != 0 || Application.targetFrameRate != 30) { QualitySettings.vSyncCount = 0; Application.targetFrameRate = 30; }
+    if (_firstFinish < 0 && _finished > 0) _firstFinish = RaceTime;
+    bool over = Phase == RacePhase.Finished || (Phase == RacePhase.Racing && ((_firstFinish >= 0 && RaceTime - _firstFinish > 45) || RaceTime > 300));
+    if (!over) return;
+    _overFor += Time.unscaledDeltaTime;
+    if (_overFor > 6f) { _overFor = float.NegativeInfinity; RaceConfig.LaunchNextAutoplay(); }
+  }
+
   void Update() {
     if (_live.Count == 0) return;
+    AutoplayNext();
     var order = Standings();
     if (followCam != null) {
       // Frame the pack: an anchor at the mean position of the racers still running, looking along the track there.
@@ -324,10 +364,10 @@ public unsafe class MultiRaceOrchestrator : MonoBehaviour {
         _anchor = new GameObject("PackAnchor").transform; followCam.target = _anchor;
         followCam.groundHeight = u => map.SurfaceHeightAt(new Vector2(u.x, u.z));   // Unity (x, z) = MuJoCo (x, y)
       }
-      var run = order.Where(r => r.finishTime < 0 && r.controller.BaseTransform != null).ToList();
-      if (run.Count == 0) run = order.Where(r => r.controller.BaseTransform != null).ToList();
+      var run = order.Where(r => r.finishTime < 0 && r.Body.BaseTransform != null).ToList();
+      if (run.Count == 0) run = order.Where(r => r.Body.BaseTransform != null).ToList();
       if (run.Count > 0) {
-        var sum = Vector3.zero; float dsum = 0; foreach (var r in run) { sum += r.controller.BaseTransform.position; dsum += r.distance; }
+        var sum = Vector3.zero; float dsum = 0; foreach (var r in run) { sum += r.Body.BaseTransform.position; dsum += r.distance; }
         _anchor.position = sum / run.Count;
         map.PointAt(dsum / run.Count, out var tan);
         _camForward = Vector3.Slerp(_camForward, new Vector3(tan.x, 0f, tan.y), 1f - Mathf.Exp(-2.5f * Time.deltaTime)).normalized;

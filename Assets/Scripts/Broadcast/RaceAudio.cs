@@ -72,7 +72,7 @@ public class RaceAudio : MonoBehaviour {
     _ui = gameObject.AddComponent<AudioSource>(); _ui.spatialBlend = 0f; _ui.playOnAwake = false;
     _bed = gameObject.AddComponent<AudioSource>(); _bed.clip = _crowd; _bed.loop = true; _bed.volume = 0.12f * master; _bed.spatialBlend = 0f; _bed.Play();
     foreach (var r in race.Live) {
-      var b = r.controller.BaseTransform; if (b == null) continue;
+      var b = r.Body.BaseTransform; if (b == null) continue;
       var l = new Loops();
       // Each loop on its own child: one AudioLowPassFilter per GameObject filters every source on it.
       var wg = new GameObject("whine"); wg.transform.SetParent(b, false);

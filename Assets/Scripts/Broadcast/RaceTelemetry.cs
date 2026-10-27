@@ -81,14 +81,14 @@ public unsafe class RaceTelemetry : MonoBehaviour {
     _next = (float)race.RaceTime + 1f / hz;
     var d = MjScene.Instance.Data; var ci = CultureInfo.InvariantCulture;
     foreach (var r in race.Live) {
-      var s = sensors.Of(r); if (s == null) continue; var M = r.controller.Model; var c = r.controller.command;
-      double qw = d->qpos[M.BaseQpos + 3], qx = d->qpos[M.BaseQpos + 4], qy = d->qpos[M.BaseQpos + 5], qz = d->qpos[M.BaseQpos + 6];
+      var s = sensors.Of(r); if (s == null) continue; var B = r.Body; var c = B.Command;
+      double qw = d->qpos[B.BaseQpos + 3], qx = d->qpos[B.BaseQpos + 4], qy = d->qpos[B.BaseQpos + 5], qz = d->qpos[B.BaseQpos + 6];
       double yaw = Math.Atan2(2 * (qw * qz + qx * qy), 1 - 2 * (qy * qy + qz * qz));
       _sb.Clear();
       _sb.AppendFormat(ci, "{{\"t\":{0:F2},\"racer\":\"{1}\",\"x\":{2:F3},\"y\":{3:F3},\"z\":{4:F3},\"yaw\":{5:F3},\"v\":{6:F3},\"cmd\":[{7:F2},{8:F2},{9:F2}],",
-          race.RaceTime, r.name, d->qpos[M.BaseQpos], d->qpos[M.BaseQpos + 1], d->qpos[M.BaseQpos + 2], yaw, s.speed, c.x, c.y, c.z);
+          race.RaceTime, r.name, d->qpos[B.BaseQpos], d->qpos[B.BaseQpos + 1], d->qpos[B.BaseQpos + 2], yaw, s.speed, c.x, c.y, c.z);
       _sb.AppendFormat(ci, "\"effort\":[{0}],\"power\":{1:F1},\"state\":\"{2}\",\"dist\":{3:F2},\"lat\":{4:F2},\"intent\":\"{5}\",\"mode\":\"{6}\"}}",
-          string.Join(",", s.effort.Select(e => e.ToString("F2", ci))), s.power, r.state, r.distance, r.lateral, r.intent, r.controller.Active);
+          string.Join(",", s.effort.Select(e => e.ToString("F2", ci))), s.power, r.state, r.distance, r.lateral, r.intent, B.ModeName);
       _w.WriteLine(_sb.ToString());
     }
   }

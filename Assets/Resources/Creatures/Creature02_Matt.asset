@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 74d0090ce7037f94baae4fd85f50e4b3, type: 3}
+  m_Name: Creature02_Matt
+  m_EditorClassIdentifier: PoRace::PoRace.CreatureDefinition
+  displayName: Matt
+  body: 1
+  height: 1.89
+  raceable: 0
+  blockedBy: 'Preview: his policy (m6) walks and never falls but only reaches about half the commanded speed; graduation 0/100.'
+  visualPrefab: {fileID: 3051336484890137208, guid: c1f23ab7dae53284da5d8967201e499d, type: 3}
+  color: {r: 1, g: 0.62, b: 0.18, a: 1}
+  cameraHeight: 1.2

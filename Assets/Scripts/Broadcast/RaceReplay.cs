@@ -108,7 +108,7 @@ public unsafe class RaceReplay : MonoBehaviour {
   void GhostRestart() {
     _ghostOn = race.Live.Count == 1;
     if (!_ghostOn) return;
-    var root = race.Live[0].controller.BaseTransform; if (root == null) { _ghostOn = false; return; }
+    var root = race.Live[0].Body.BaseTransform; if (root == null) { _ghostOn = false; return; }
     _parts = root.GetComponentsInChildren<Renderer>();
     _rec = new GhostRun { parts = _parts.Length }; _nextSample = 0f;
     _best = Load();

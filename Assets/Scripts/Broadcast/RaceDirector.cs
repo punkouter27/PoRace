@@ -79,7 +79,7 @@ public class RaceDirector : MonoBehaviour {
     if (shot == Shot.Incident && !BroadcastUi.Headless && Time.timeScale >= 0.99f) { Time.timeScale = slowMotion; _slowUntil = Time.unscaledTime + 1.6f; }
   }
 
-  Vector3 Pos(Racer r) => r != null && r.controller.BaseTransform != null ? r.controller.BaseTransform.position : Vector3.zero;
+  Vector3 Pos(Racer r) => r != null && r.Body.BaseTransform != null ? r.Body.BaseTransform.position : Vector3.zero;
   Vector3 Fwd(Racer r) { race.map.PointAt(r.distance, out var t); return new Vector3(t.x, 0f, t.y); }
 
   void Update() {
