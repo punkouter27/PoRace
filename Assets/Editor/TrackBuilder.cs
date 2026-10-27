@@ -290,8 +290,11 @@ public static class TrackBuilder {
     CreateMaps();
     BuildScene(MapDir + "/Map03_BankedOval.asset", "Assets/Scenes/Track01x4.unity", "Assets/Scenes/Track03.unity");
     const string path = "Assets/Scenes/Track03.unity";
-    // Slope-trained locomotion (train.py --tilt_max) for this track only; the flat tracks keep the parity-gated policy.
-    var bankPolicy = AssetDatabase.LoadAssetAtPath<Unity.InferenceEngine.ModelAsset>("Assets/Policies/go2_loco_bank.onnx");
+    // Slope-trained locomotion for this track only; the flat tracks keep the parity-gated policy. The graduated steeplechase
+    // policy (s7, also slope-trained) scores bank 30/30 against r7's 6/10 and races Track03 seeds 1-5 in 138.5-149.9 s
+    // (r7: 148.1-165.0 s, one back-off), so it is preferred; go2_loco_bank.onnx (r7) is the fallback.
+    var bankPolicy = AssetDatabase.LoadAssetAtPath<Unity.InferenceEngine.ModelAsset>("Assets/Policies/go2_loco_steeple.onnx")
+                     ?? AssetDatabase.LoadAssetAtPath<Unity.InferenceEngine.ModelAsset>("Assets/Policies/go2_loco_bank.onnx");
     if (bankPolicy != null) {
       var scene = EditorSceneManager.OpenScene(path, OpenSceneMode.Single);
       foreach (var c in Object.FindObjectsByType<Go2Controller>(FindObjectsInactive.Include, FindObjectsSortMode.None)) { c.locomotionModel = bankPolicy; EditorUtility.SetDirty(c); }
