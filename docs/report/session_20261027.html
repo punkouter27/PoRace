@@ -1,0 +1,258 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Training Session Report</title><style>
+:root{--bg:#f6f7f9;--card:#fff;--ink:#1d2330;--muted:#5d6675;--line:#dde1e7}
+@media (prefers-color-scheme:dark){:root{--bg:#12151b;--card:#1b2029;--ink:#e8ebf0;--muted:#9aa3b2;--line:#2c3340}}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:980px;margin:0 auto;padding:24px 16px 60px} h1{font-size:26px;margin:0} h2{font-size:19px;margin:30px 0 8px}
+.lede{color:var(--muted)} .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin:10px 0;overflow-x:auto}
+svg{width:100%;height:auto} .ct{font-weight:600;fill:var(--ink);font-size:14px} .tk{fill:var(--muted);font-size:11px} .gl{stroke:var(--line)} .bar{stroke:#dc2626;stroke-dasharray:5 4}
+.legend{font-size:13px;color:var(--muted)} .key{margin-right:16px} .key i{display:inline-block;width:12px;height:12px;border-radius:2px;margin-right:6px;vertical-align:-1px}
+table{border-collapse:collapse;width:100%;font-size:13px} th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:top} th{color:var(--muted)}
+ul.tiers{list-style:none;padding:0} ul.tiers li{padding:8px 10px;border-radius:8px;margin:6px 0;background:var(--card);border:1px solid var(--line)}
+li.ok b{color:#059669} li.no b{color:#dc2626} code{font-size:13px}
+</style></head><body><main>
+<h1>Unattended training session, 2026-10-26/27</h1>
+<p class="lede">Generated 2026-10-27. Go2, Brax PPO on MuJoCo Warp, RTX 2060 (6 GB), 1024 envs, Unity editor closed.
+Every run continues the previous best checkpoint with pushes, cubes, domain randomization and slopes to 17 deg on. Each checkpoint was gated
+on the CPU while the next one trained (<code>training/autogate.sh</code>). TensorBoard: <code>training/runs/*/tb</code>.</p>
+
+<h2>Milestones</h2>
+<ul class="tiers"><li class="ok"><b>reached</b> <b>Toddler / Beginner</b>: every run keeps R1 (flat tracking, 20/20) and bank 15 deg (30/30) at every gated checkpoint.</li><li class="ok"><b>reached</b> <b>Child / Intermediate</b>: steeplechase graduation on held-out seeds with R2 intact (s7 @ 68.8M: 277/300, R2 30/30), Track04 40/40 racers finish.</li><li class="ok"><b>reached</b> <b>Adult / Advanced</b>: faster dog, 2.0 and 2.5 m/s commands held at 90 % from standstill (speed rung 9/10) without losing R1 / R2 / bank.</li></ul>
+
+<h2>Top 3 metrics</h2>
+<div class="card"><svg viewBox="0 0 680 300" role="img" aria-label="Steeplechase pass rate per checkpoint (% of 300 held-out episodes; s4 on 100)"><text x="60" y="22" class="ct">Steeplechase pass rate per checkpoint (% of 300 held-out episodes; s4 on 100)</text>
+<line x1="60" y1="260.0" x2="660" y2="260.0" class="gl"/><text x="54" y="264.0" class="tk" text-anchor="end">72.6</text>
+<line x1="60" y1="205.0" x2="660" y2="205.0" class="gl"/><text x="54" y="209.0" class="tk" text-anchor="end">78.9</text>
+<line x1="60" y1="150.0" x2="660" y2="150.0" class="gl"/><text x="54" y="154.0" class="tk" text-anchor="end">85.2</text>
+<line x1="60" y1="95.0" x2="660" y2="95.0" class="gl"/><text x="54" y="99.0" class="tk" text-anchor="end">91.5</text>
+<line x1="60" y1="40.0" x2="660" y2="40.0" class="gl"/><text x="54" y="44.0" class="tk" text-anchor="end">97.8</text>
+<text x="60.0" y="276" class="tk" text-anchor="middle">0M</text>
+<text x="180.0" y="276" class="tk" text-anchor="middle">62M</text>
+<text x="300.0" y="276" class="tk" text-anchor="middle">124M</text>
+<text x="420.0" y="276" class="tk" text-anchor="middle">185M</text>
+<text x="540.0" y="276" class="tk" text-anchor="middle">247M</text>
+<text x="660.0" y="276" class="tk" text-anchor="middle">309M</text>
+<text x="370" y="294" class="tk" text-anchor="middle">training steps (cumulative over the chain of runs)</text>
+<text transform="translate(14,150) rotate(-90)" class="tk" text-anchor="middle">% passed</text>
+<line x1="60" y1="107.8" x2="660" y2="107.8" class="bar"/><text x="656" y="102.8" class="tk" text-anchor="end">graduation 90 %</text>
+<polyline fill="none" stroke="#9ca3af" stroke-width="2.5" points="104.6,142.7 126.8,221.3 149.1,160.2 171.4,238.7"/>
+<circle cx="104.6" cy="142.7" r="3.5" fill="#9ca3af"><title>s4 22.9M: 86</title></circle>
+<circle cx="126.8" cy="221.3" r="3.5" fill="#9ca3af"><title>s4 34.4M: 77</title></circle>
+<circle cx="149.1" cy="160.2" r="3.5" fill="#9ca3af"><title>s4 45.9M: 84</title></circle>
+<circle cx="171.4" cy="238.7" r="3.5" fill="#9ca3af"><title>s4 57.3M: 75</title></circle>
+<polyline fill="none" stroke="#d97706" stroke-width="2.5" points="126.8,151.5 149.1,151.5 171.3,125.3 193.6,125.3 215.9,142.7 238.2,125.3 260.5,72.9 282.7,151.5"/>
+<circle cx="126.8" cy="151.5" r="3.5" fill="#d97706"><title>s5 34.4M: 85</title></circle>
+<circle cx="149.1" cy="151.5" r="3.5" fill="#d97706"><title>s5 45.8M: 85</title></circle>
+<circle cx="171.3" cy="125.3" r="3.5" fill="#d97706"><title>s5 57.3M: 88</title></circle>
+<circle cx="193.6" cy="125.3" r="3.5" fill="#d97706"><title>s5 68.8M: 88</title></circle>
+<circle cx="215.9" cy="142.7" r="3.5" fill="#d97706"><title>s5 80.2M: 86</title></circle>
+<circle cx="238.2" cy="125.3" r="3.5" fill="#d97706"><title>s5 91.7M: 88</title></circle>
+<circle cx="260.5" cy="72.9" r="3.5" fill="#d97706"><title>s5 103.2M: 94</title></circle>
+<circle cx="282.7" cy="151.5" r="3.5" fill="#d97706"><title>s5 114.7M: 85</title></circle>
+<polyline fill="none" stroke="#7c3aed" stroke-width="2.5" points="295.5,99.1 330.5,99.1 365.5,99.1"/>
+<circle cx="295.5" cy="99.1" r="3.5" fill="#7c3aed"><title>s6 121.2M: 91</title></circle>
+<circle cx="330.5" cy="99.1" r="3.5" fill="#7c3aed"><title>s6 139.2M: 91</title></circle>
+<circle cx="365.5" cy="99.1" r="3.5" fill="#7c3aed"><title>s6 157.3M: 91</title></circle>
+<polyline fill="none" stroke="#2563eb" stroke-width="2.5" points="384.7,142.7 403.8,113.6 422.9,104.9 442.0,113.6 461.1,119.5 480.2,107.8 499.3,87.5 518.4,102.0 537.5,104.9"/>
+<circle cx="384.7" cy="142.7" r="3.5" fill="#2563eb"><title>s7 167.1M: 86</title></circle>
+<circle cx="403.8" cy="113.6" r="3.5" fill="#2563eb"><title>s7 177.0M: 89.3</title></circle>
+<circle cx="422.9" cy="104.9" r="3.5" fill="#2563eb"><title>s7 186.8M: 90.3</title></circle>
+<circle cx="442.0" cy="113.6" r="3.5" fill="#2563eb"><title>s7 196.6M: 89.3</title></circle>
+<circle cx="461.1" cy="119.5" r="3.5" fill="#2563eb"><title>s7 206.5M: 88.7</title></circle>
+<circle cx="480.2" cy="107.8" r="3.5" fill="#2563eb"><title>s7 216.3M: 90</title></circle>
+<circle cx="499.3" cy="87.5" r="3.5" fill="#2563eb"><title>s7 226.1M: 92.3</title></circle>
+<circle cx="518.4" cy="102.0" r="3.5" fill="#2563eb"><title>s7 235.9M: 90.7</title></circle>
+<circle cx="537.5" cy="104.9" r="3.5" fill="#2563eb"><title>s7 245.8M: 90.3</title></circle>
+<polyline fill="none" stroke="#0891b2" stroke-width="2.5" points="527.9,99.1 556.6,87.5 585.2,125.3 613.9,84.6 642.5,102.0"/>
+<circle cx="527.9" cy="99.1" r="3.5" fill="#0891b2"><title>s8 240.8M: 91</title></circle>
+<circle cx="556.6" cy="87.5" r="3.5" fill="#0891b2"><title>s8 255.6M: 92.3</title></circle>
+<circle cx="585.2" cy="125.3" r="3.5" fill="#0891b2"><title>s8 270.3M: 88</title></circle>
+<circle cx="613.9" cy="84.6" r="3.5" fill="#0891b2"><title>s8 285.1M: 92.7</title></circle>
+<circle cx="642.5" cy="102.0" r="3.5" fill="#0891b2"><title>s8 299.8M: 90.7</title></circle>
+<polyline fill="none" stroke="#dc2626" stroke-width="2.5" points="521.6,87.5 543.8,110.7 566.1,128.2"/>
+<circle cx="521.6" cy="87.5" r="3.5" fill="#dc2626"><title>s9 237.6M: 92.3</title></circle>
+<circle cx="543.8" cy="110.7" r="3.5" fill="#dc2626"><title>s9 249.0M: 89.7</title></circle>
+<circle cx="566.1" cy="128.2" r="3.5" fill="#dc2626"><title>s9 260.5M: 87.7</title></circle>
+<polyline fill="none" stroke="#65a30d" stroke-width="2.5" points="518.4,61.3 537.5,90.4 556.6,87.5 575.7,104.9 594.8,99.1"/>
+<circle cx="518.4" cy="61.3" r="3.5" fill="#65a30d"><title>s10 235.9M: 95.3</title></circle>
+<circle cx="537.5" cy="90.4" r="3.5" fill="#65a30d"><title>s10 245.8M: 92</title></circle>
+<circle cx="556.6" cy="87.5" r="3.5" fill="#65a30d"><title>s10 255.6M: 92.3</title></circle>
+<circle cx="575.7" cy="104.9" r="3.5" fill="#65a30d"><title>s10 265.4M: 90.3</title></circle>
+<circle cx="594.8" cy="99.1" r="3.5" fill="#65a30d"><title>s10 275.3M: 91</title></circle>
+</svg><div class="legend"><span class="key"><i style="background:#9ca3af"></i>s4: lr 1e-4, outer spawns</span> <span class="key"><i style="background:#d97706"></i>s5: swing 0.13 m</span> <span class="key"><i style="background:#7c3aed"></i>s6: continue</span> <span class="key"><i style="background:#2563eb"></i>s7: pushes to 7 m/s</span> <span class="key"><i style="background:#0891b2"></i>s8: lr 5e-5 polish</span> <span class="key"><i style="background:#dc2626"></i>s9: swing 0.14, outer 0.7</span> <span class="key"><i style="background:#65a30d"></i>s10: entropy 0.005</span></div></div>
+<div class="card"><svg viewBox="0 0 680 300" role="img" aria-label="Faster dog: mean speed on a 2.5 m/s command from standstill (10 seeds)"><text x="60" y="22" class="ct">Faster dog: mean speed on a 2.5 m/s command from standstill (10 seeds)</text>
+<line x1="60" y1="260.0" x2="660" y2="260.0" class="gl"/><text x="54" y="264.0" class="tk" text-anchor="end">1.6</text>
+<line x1="60" y1="205.0" x2="660" y2="205.0" class="gl"/><text x="54" y="209.0" class="tk" text-anchor="end">1.81</text>
+<line x1="60" y1="150.0" x2="660" y2="150.0" class="gl"/><text x="54" y="154.0" class="tk" text-anchor="end">2.02</text>
+<line x1="60" y1="95.0" x2="660" y2="95.0" class="gl"/><text x="54" y="99.0" class="tk" text-anchor="end">2.23</text>
+<line x1="60" y1="40.0" x2="660" y2="40.0" class="gl"/><text x="54" y="44.0" class="tk" text-anchor="end">2.44</text>
+<text x="60.0" y="276" class="tk" text-anchor="middle">0M</text>
+<text x="180.0" y="276" class="tk" text-anchor="middle">83M</text>
+<text x="300.0" y="276" class="tk" text-anchor="middle">167M</text>
+<text x="420.0" y="276" class="tk" text-anchor="middle">250M</text>
+<text x="540.0" y="276" class="tk" text-anchor="middle">333M</text>
+<text x="660.0" y="276" class="tk" text-anchor="middle">417M</text>
+<text x="370" y="294" class="tk" text-anchor="middle">training steps (cumulative over the chain of runs)</text>
+<text transform="translate(14,150) rotate(-90)" class="tk" text-anchor="middle">m/s</text>
+<line x1="60" y1="90.0" x2="660" y2="90.0" class="bar"/><text x="656" y="85.0" class="tk" text-anchor="end">pass 2.25 m/s</text>
+<line x1="60" y1="238.7" x2="660" y2="238.7" class="bar"/><text x="656" y="233.7" class="tk" text-anchor="end">start (s7) ~1.7</text>
+<polyline fill="none" stroke="#9ca3af" stroke-width="2.5" points="76.5,225.7 93.0,223.1"/>
+<circle cx="76.5" cy="225.7" r="3.5" fill="#9ca3af"><title>r8 11.5M: 1.73</title></circle>
+<circle cx="93.0" cy="223.1" r="3.5" fill="#9ca3af"><title>r8 22.9M: 1.74</title></circle>
+<polyline fill="none" stroke="#d97706" stroke-width="2.5" points="76.5,204.8 93.0,173.5 109.5,150.0 126.0,150.0 142.5,137.0 159.0,131.7 175.6,134.3"/>
+<circle cx="76.5" cy="204.8" r="3.5" fill="#d97706"><title>r9 11.5M: 1.81</title></circle>
+<circle cx="93.0" cy="173.5" r="3.5" fill="#d97706"><title>r9 22.9M: 1.93</title></circle>
+<circle cx="109.5" cy="150.0" r="3.5" fill="#d97706"><title>r9 34.4M: 2.02</title></circle>
+<circle cx="126.0" cy="150.0" r="3.5" fill="#d97706"><title>r9 45.9M: 2.02</title></circle>
+<circle cx="142.5" cy="137.0" r="3.5" fill="#d97706"><title>r9 57.3M: 2.07</title></circle>
+<circle cx="159.0" cy="131.7" r="3.5" fill="#d97706"><title>r9 68.8M: 2.09</title></circle>
+<circle cx="175.6" cy="134.3" r="3.5" fill="#d97706"><title>r9 80.3M: 2.08</title></circle>
+<polyline fill="none" stroke="#7c3aed" stroke-width="2.5" points="175.5,144.8 192.0,137.0 208.6,129.1 225.1,123.9"/>
+<circle cx="175.5" cy="144.8" r="3.5" fill="#7c3aed"><title>r10 80.3M: 2.04</title></circle>
+<circle cx="192.0" cy="137.0" r="3.5" fill="#7c3aed"><title>r10 91.7M: 2.07</title></circle>
+<circle cx="208.6" cy="129.1" r="3.5" fill="#7c3aed"><title>r10 103.2M: 2.1</title></circle>
+<circle cx="225.1" cy="123.9" r="3.5" fill="#7c3aed"><title>r10 114.7M: 2.12</title></circle>
+<polyline fill="none" stroke="#db2777" stroke-width="2.5" points="241.6,118.7 258.1,123.9 274.6,110.9 291.1,118.7 307.6,97.8 324.1,97.8 340.6,100.4 357.2,100.4"/>
+<circle cx="241.6" cy="118.7" r="3.5" fill="#db2777"><title>r11 126.2M: 2.14</title></circle>
+<circle cx="258.1" cy="123.9" r="3.5" fill="#db2777"><title>r11 137.6M: 2.12</title></circle>
+<circle cx="274.6" cy="110.9" r="3.5" fill="#db2777"><title>r11 149.1M: 2.17</title></circle>
+<circle cx="291.1" cy="118.7" r="3.5" fill="#db2777"><title>r11 160.6M: 2.14</title></circle>
+<circle cx="307.6" cy="97.8" r="3.5" fill="#db2777"><title>r11 172.0M: 2.22</title></circle>
+<circle cx="324.1" cy="97.8" r="3.5" fill="#db2777"><title>r11 183.5M: 2.22</title></circle>
+<circle cx="340.6" cy="100.4" r="3.5" fill="#db2777"><title>r11 195.0M: 2.21</title></circle>
+<circle cx="357.2" cy="100.4" r="3.5" fill="#db2777"><title>r11 206.5M: 2.21</title></circle>
+<polyline fill="none" stroke="#0891b2" stroke-width="2.5" points="399.6,95.2 425.5,90.0 451.5,84.8 477.4,100.4"/>
+<circle cx="399.6" cy="95.2" r="3.5" fill="#0891b2"><title>r12 235.9M: 2.23</title></circle>
+<circle cx="425.5" cy="90.0" r="3.5" fill="#0891b2"><title>r12 253.9M: 2.25</title></circle>
+<circle cx="451.5" cy="84.8" r="3.5" fill="#0891b2"><title>r12 272.0M: 2.27</title></circle>
+<circle cx="477.4" cy="100.4" r="3.5" fill="#0891b2"><title>r12 290.0M: 2.21</title></circle>
+<polyline fill="none" stroke="#059669" stroke-width="2.5" points="472.7,108.3 494.0,87.4 515.2,74.3 536.4,87.4 557.6,74.3 578.9,79.6 600.1,66.5 621.3,61.3 642.5,66.5"/>
+<circle cx="472.7" cy="108.3" r="3.5" fill="#059669"><title>r13 286.7M: 2.18</title></circle>
+<circle cx="494.0" cy="87.4" r="3.5" fill="#059669"><title>r13 301.5M: 2.26</title></circle>
+<circle cx="515.2" cy="74.3" r="3.5" fill="#059669"><title>r13 316.2M: 2.31</title></circle>
+<circle cx="536.4" cy="87.4" r="3.5" fill="#059669"><title>r13 331.0M: 2.26</title></circle>
+<circle cx="557.6" cy="74.3" r="3.5" fill="#059669"><title>r13 345.7M: 2.31</title></circle>
+<circle cx="578.9" cy="79.6" r="3.5" fill="#059669"><title>r13 360.5M: 2.29</title></circle>
+<circle cx="600.1" cy="66.5" r="3.5" fill="#059669"><title>r13 375.2M: 2.34</title></circle>
+<circle cx="621.3" cy="61.3" r="3.5" fill="#059669"><title>r13 390.0M: 2.36</title></circle>
+<circle cx="642.5" cy="66.5" r="3.5" fill="#059669"><title>r13 404.7M: 2.34</title></circle>
+</svg><div class="legend"><span class="key"><i style="background:#9ca3af"></i>r8: speed-scaled sigma</span> <span class="key"><i style="background:#d97706"></i>r9: sharp sigma, progress x2</span> <span class="key"><i style="background:#7c3aed"></i>r10: lr 5e-5</span> <span class="key"><i style="background:#db2777"></i>r11: effort penalties x0.25</span> <span class="key"><i style="background:#0891b2"></i>r12: continue</span> <span class="key"><i style="background:#059669"></i>r13: progress x3, lr 5e-5</span></div></div>
+<div class="card"><svg viewBox="0 0 680 300" role="img" aria-label="Value loss (TensorBoard training/v_loss)"><text x="60" y="22" class="ct">Value loss (TensorBoard training/v_loss)</text>
+<line x1="60" y1="260.0" x2="660" y2="260.0" class="gl"/><text x="54" y="264.0" class="tk" text-anchor="end">0.00108</text>
+<line x1="60" y1="205.0" x2="660" y2="205.0" class="gl"/><text x="54" y="209.0" class="tk" text-anchor="end">0.00222</text>
+<line x1="60" y1="150.0" x2="660" y2="150.0" class="gl"/><text x="54" y="154.0" class="tk" text-anchor="end">0.00337</text>
+<line x1="60" y1="95.0" x2="660" y2="95.0" class="gl"/><text x="54" y="99.0" class="tk" text-anchor="end">0.00451</text>
+<line x1="60" y1="40.0" x2="660" y2="40.0" class="gl"/><text x="54" y="44.0" class="tk" text-anchor="end">0.00565</text>
+<text x="60.0" y="276" class="tk" text-anchor="middle">0M</text>
+<text x="180.0" y="276" class="tk" text-anchor="middle">83M</text>
+<text x="300.0" y="276" class="tk" text-anchor="middle">167M</text>
+<text x="420.0" y="276" class="tk" text-anchor="middle">250M</text>
+<text x="540.0" y="276" class="tk" text-anchor="middle">333M</text>
+<text x="660.0" y="276" class="tk" text-anchor="middle">417M</text>
+<text x="370" y="294" class="tk" text-anchor="middle">training steps (cumulative over the chain of runs)</text>
+<text transform="translate(14,150) rotate(-90)" class="tk" text-anchor="middle">v_loss</text>
+<polyline fill="none" stroke="#9ca3af" stroke-width="2.5" points="76.5,219.9 93.0,222.7 109.5,225.7 126.0,222.7 142.5,225.1"/>
+<circle cx="76.5" cy="219.9" r="3.5" fill="#9ca3af"><title>s4 11.5M: 0.00192</title></circle>
+<circle cx="93.0" cy="222.7" r="3.5" fill="#9ca3af"><title>s4 22.9M: 0.00186</title></circle>
+<circle cx="109.5" cy="225.7" r="3.5" fill="#9ca3af"><title>s4 34.4M: 0.00179</title></circle>
+<circle cx="126.0" cy="222.7" r="3.5" fill="#9ca3af"><title>s4 45.9M: 0.00186</title></circle>
+<circle cx="142.5" cy="225.1" r="3.5" fill="#9ca3af"><title>s4 57.3M: 0.00181</title></circle>
+<polyline fill="none" stroke="#d97706" stroke-width="2.5" points="109.5,232.7 126.0,236.0 142.5,235.6 159.0,233.5 175.5,237.5 192.0,231.8 208.5,235.1 225.0,234.7 241.5,236.0"/>
+<circle cx="109.5" cy="232.7" r="3.5" fill="#d97706"><title>s5 34.4M: 0.00165</title></circle>
+<circle cx="126.0" cy="236.0" r="3.5" fill="#d97706"><title>s5 45.8M: 0.00158</title></circle>
+<circle cx="142.5" cy="235.6" r="3.5" fill="#d97706"><title>s5 57.3M: 0.00159</title></circle>
+<circle cx="159.0" cy="233.5" r="3.5" fill="#d97706"><title>s5 68.8M: 0.00163</title></circle>
+<circle cx="175.5" cy="237.5" r="3.5" fill="#d97706"><title>s5 80.2M: 0.00155</title></circle>
+<circle cx="192.0" cy="231.8" r="3.5" fill="#d97706"><title>s5 91.7M: 0.00167</title></circle>
+<circle cx="208.5" cy="235.1" r="3.5" fill="#d97706"><title>s5 103.2M: 0.0016</title></circle>
+<circle cx="225.0" cy="234.7" r="3.5" fill="#d97706"><title>s5 114.7M: 0.00161</title></circle>
+<circle cx="241.5" cy="236.0" r="3.5" fill="#d97706"><title>s5 126.1M: 0.00158</title></circle>
+<polyline fill="none" stroke="#7c3aed" stroke-width="2.5" points="234.5,234.8 260.4,238.7 286.4,237.3"/>
+<circle cx="234.5" cy="234.8" r="3.5" fill="#7c3aed"><title>s6 121.2M: 0.0016</title></circle>
+<circle cx="260.4" cy="238.7" r="3.5" fill="#7c3aed"><title>s6 139.2M: 0.00152</title></circle>
+<circle cx="286.4" cy="237.3" r="3.5" fill="#7c3aed"><title>s6 157.3M: 0.00155</title></circle>
+<polyline fill="none" stroke="#2563eb" stroke-width="2.5" points="300.6,198.9 314.7,207.3 328.9,204.2 343.0,204.0 357.2,205.8 371.3,203.2 385.5,207.9 399.6,210.6 413.8,209.0"/>
+<circle cx="300.6" cy="198.9" r="3.5" fill="#2563eb"><title>s7 167.1M: 0.00235</title></circle>
+<circle cx="314.7" cy="207.3" r="3.5" fill="#2563eb"><title>s7 177.0M: 0.00218</title></circle>
+<circle cx="328.9" cy="204.2" r="3.5" fill="#2563eb"><title>s7 186.8M: 0.00224</title></circle>
+<circle cx="343.0" cy="204.0" r="3.5" fill="#2563eb"><title>s7 196.6M: 0.00225</title></circle>
+<circle cx="357.2" cy="205.8" r="3.5" fill="#2563eb"><title>s7 206.5M: 0.00221</title></circle>
+<circle cx="371.3" cy="203.2" r="3.5" fill="#2563eb"><title>s7 216.3M: 0.00226</title></circle>
+<circle cx="385.5" cy="207.9" r="3.5" fill="#2563eb"><title>s7 226.1M: 0.00216</title></circle>
+<circle cx="399.6" cy="210.6" r="3.5" fill="#2563eb"><title>s7 235.9M: 0.00211</title></circle>
+<circle cx="413.8" cy="209.0" r="3.5" fill="#2563eb"><title>s7 245.8M: 0.00214</title></circle>
+<polyline fill="none" stroke="#0891b2" stroke-width="2.5" points="406.7,209.2 427.9,214.0 449.1,216.8 470.3,213.7 491.6,215.9"/>
+<circle cx="406.7" cy="209.2" r="3.5" fill="#0891b2"><title>s8 240.8M: 0.00214</title></circle>
+<circle cx="427.9" cy="214.0" r="3.5" fill="#0891b2"><title>s8 255.6M: 0.00204</title></circle>
+<circle cx="449.1" cy="216.8" r="3.5" fill="#0891b2"><title>s8 270.3M: 0.00198</title></circle>
+<circle cx="470.3" cy="213.7" r="3.5" fill="#0891b2"><title>s8 285.1M: 0.00204</title></circle>
+<circle cx="491.6" cy="215.9" r="3.5" fill="#0891b2"><title>s8 299.8M: 0.002</title></circle>
+<polyline fill="none" stroke="#dc2626" stroke-width="2.5" points="401.9,212.9 418.5,217.9 435.0,214.7"/>
+<circle cx="401.9" cy="212.9" r="3.5" fill="#dc2626"><title>s9 237.6M: 0.00206</title></circle>
+<circle cx="418.5" cy="217.9" r="3.5" fill="#dc2626"><title>s9 249.0M: 0.00196</title></circle>
+<circle cx="435.0" cy="214.7" r="3.5" fill="#dc2626"><title>s9 260.5M: 0.00202</title></circle>
+<polyline fill="none" stroke="#65a30d" stroke-width="2.5" points="399.6,208.6 413.7,213.5 427.9,210.7 442.0,208.6 456.2,208.9 470.3,205.7"/>
+<circle cx="399.6" cy="208.6" r="3.5" fill="#65a30d"><title>s10 235.9M: 0.00215</title></circle>
+<circle cx="413.7" cy="213.5" r="3.5" fill="#65a30d"><title>s10 245.8M: 0.00205</title></circle>
+<circle cx="427.9" cy="210.7" r="3.5" fill="#65a30d"><title>s10 255.6M: 0.00211</title></circle>
+<circle cx="442.0" cy="208.6" r="3.5" fill="#65a30d"><title>s10 265.4M: 0.00215</title></circle>
+<circle cx="456.2" cy="208.9" r="3.5" fill="#65a30d"><title>s10 275.3M: 0.00214</title></circle>
+<circle cx="470.3" cy="205.7" r="3.5" fill="#65a30d"><title>s10 285.1M: 0.00221</title></circle>
+<polyline fill="none" stroke="#9ca3af" stroke-width="2.5" points="76.5,222.2 93.0,226.0"/>
+<circle cx="76.5" cy="222.2" r="3.5" fill="#9ca3af"><title>r8 11.5M: 0.00187</title></circle>
+<circle cx="93.0" cy="226.0" r="3.5" fill="#9ca3af"><title>r8 22.9M: 0.00179</title></circle>
+<polyline fill="none" stroke="#d97706" stroke-width="2.5" points="76.5,123.2 93.0,132.5 109.5,136.7 126.0,140.7 142.5,141.7 159.0,145.0 175.6,149.7"/>
+<circle cx="76.5" cy="123.2" r="3.5" fill="#d97706"><title>r9 11.5M: 0.00392</title></circle>
+<circle cx="93.0" cy="132.5" r="3.5" fill="#d97706"><title>r9 22.9M: 0.00373</title></circle>
+<circle cx="109.5" cy="136.7" r="3.5" fill="#d97706"><title>r9 34.4M: 0.00364</title></circle>
+<circle cx="126.0" cy="140.7" r="3.5" fill="#d97706"><title>r9 45.9M: 0.00356</title></circle>
+<circle cx="142.5" cy="141.7" r="3.5" fill="#d97706"><title>r9 57.3M: 0.00354</title></circle>
+<circle cx="159.0" cy="145.0" r="3.5" fill="#d97706"><title>r9 68.8M: 0.00347</title></circle>
+<circle cx="175.6" cy="149.7" r="3.5" fill="#d97706"><title>r9 80.3M: 0.00337</title></circle>
+<polyline fill="none" stroke="#7c3aed" stroke-width="2.5" points="175.5,150.7 192.0,148.9 208.6,152.2 225.1,154.6"/>
+<circle cx="175.5" cy="150.7" r="3.5" fill="#7c3aed"><title>r10 80.3M: 0.00335</title></circle>
+<circle cx="192.0" cy="148.9" r="3.5" fill="#7c3aed"><title>r10 91.7M: 0.00339</title></circle>
+<circle cx="208.6" cy="152.2" r="3.5" fill="#7c3aed"><title>r10 103.2M: 0.00332</title></circle>
+<circle cx="225.1" cy="154.6" r="3.5" fill="#7c3aed"><title>r10 114.7M: 0.00327</title></circle>
+<polyline fill="none" stroke="#db2777" stroke-width="2.5" points="241.6,146.6 258.1,151.4 274.6,149.5 291.1,152.4 307.6,155.2 324.1,152.0 340.6,157.4 357.2,153.1 373.7,152.0"/>
+<circle cx="241.6" cy="146.6" r="3.5" fill="#db2777"><title>r11 126.2M: 0.00344</title></circle>
+<circle cx="258.1" cy="151.4" r="3.5" fill="#db2777"><title>r11 137.6M: 0.00334</title></circle>
+<circle cx="274.6" cy="149.5" r="3.5" fill="#db2777"><title>r11 149.1M: 0.00338</title></circle>
+<circle cx="291.1" cy="152.4" r="3.5" fill="#db2777"><title>r11 160.6M: 0.00332</title></circle>
+<circle cx="307.6" cy="155.2" r="3.5" fill="#db2777"><title>r11 172.0M: 0.00326</title></circle>
+<circle cx="324.1" cy="152.0" r="3.5" fill="#db2777"><title>r11 183.5M: 0.00333</title></circle>
+<circle cx="340.6" cy="157.4" r="3.5" fill="#db2777"><title>r11 195.0M: 0.00321</title></circle>
+<circle cx="357.2" cy="153.1" r="3.5" fill="#db2777"><title>r11 206.5M: 0.0033</title></circle>
+<circle cx="373.7" cy="152.0" r="3.5" fill="#db2777"><title>r11 217.9M: 0.00333</title></circle>
+<polyline fill="none" stroke="#0891b2" stroke-width="2.5" points="399.6,155.1 425.5,156.7 451.5,149.2 477.4,154.8"/>
+<circle cx="399.6" cy="155.1" r="3.5" fill="#0891b2"><title>r12 235.9M: 0.00326</title></circle>
+<circle cx="425.5" cy="156.7" r="3.5" fill="#0891b2"><title>r12 253.9M: 0.00323</title></circle>
+<circle cx="451.5" cy="149.2" r="3.5" fill="#0891b2"><title>r12 272.0M: 0.00338</title></circle>
+<circle cx="477.4" cy="154.8" r="3.5" fill="#0891b2"><title>r12 290.0M: 0.00327</title></circle>
+<polyline fill="none" stroke="#059669" stroke-width="2.5" points="472.7,61.3 494.0,65.9 515.2,61.6 536.4,68.7 557.6,71.5 578.9,65.9 600.1,73.0 621.3,71.4 642.5,77.0"/>
+<circle cx="472.7" cy="61.3" r="3.5" fill="#059669"><title>r13 286.7M: 0.00521</title></circle>
+<circle cx="494.0" cy="65.9" r="3.5" fill="#059669"><title>r13 301.5M: 0.00512</title></circle>
+<circle cx="515.2" cy="61.6" r="3.5" fill="#059669"><title>r13 316.2M: 0.0052</title></circle>
+<circle cx="536.4" cy="68.7" r="3.5" fill="#059669"><title>r13 331.0M: 0.00506</title></circle>
+<circle cx="557.6" cy="71.5" r="3.5" fill="#059669"><title>r13 345.7M: 0.005</title></circle>
+<circle cx="578.9" cy="65.9" r="3.5" fill="#059669"><title>r13 360.5M: 0.00512</title></circle>
+<circle cx="600.1" cy="73.0" r="3.5" fill="#059669"><title>r13 375.2M: 0.00497</title></circle>
+<circle cx="621.3" cy="71.4" r="3.5" fill="#059669"><title>r13 390.0M: 0.005</title></circle>
+<circle cx="642.5" cy="77.0" r="3.5" fill="#059669"><title>r13 404.7M: 0.00488</title></circle>
+</svg><div class="legend"><span class="key"><i style="background:#9ca3af"></i>s4: lr 1e-4, outer spawns</span> <span class="key"><i style="background:#d97706"></i>s5: swing 0.13 m</span> <span class="key"><i style="background:#7c3aed"></i>s6: continue</span> <span class="key"><i style="background:#2563eb"></i>s7: pushes to 7 m/s</span> <span class="key"><i style="background:#0891b2"></i>s8: lr 5e-5 polish</span> <span class="key"><i style="background:#dc2626"></i>s9: swing 0.14, outer 0.7</span> <span class="key"><i style="background:#65a30d"></i>s10: entropy 0.005</span> <span class="key"><i style="background:#9ca3af"></i>r8: speed-scaled sigma</span> <span class="key"><i style="background:#d97706"></i>r9: sharp sigma, progress x2</span> <span class="key"><i style="background:#7c3aed"></i>r10: lr 5e-5</span> <span class="key"><i style="background:#db2777"></i>r11: effort penalties x0.25</span> <span class="key"><i style="background:#0891b2"></i>r12: continue</span> <span class="key"><i style="background:#059669"></i>r13: progress x3, lr 5e-5</span></div></div>
+
+<h2>Deltas against the previous runs</h2>
+<div class="card"><table><tr><th>metric</th><th>before</th><th>after</th></tr>
+<tr><td>Steeplechase gate</td><td>s2 @ 68.8M: 82/100 (shipped ungraduated)</td><td>s7 @ 68.8M: 277/300 on three held-out sets (94 / 91 / 92), 0 NaN</td></tr>
+<tr><td>R2 (30 N.s push + 1 kg cube)</td><td>s2: 10/10 (x10); s6: 23/30</td><td>s7: 30/30</td></tr>
+<tr><td>Track04, 4 racers, headless</td><td>s2: 20/20 finish (seeds 1-5), 89.5-226.9 s, up to 65 un-sticks</td><td>s7: 40/40 finish (seeds 1-10), 77.5-158.5 s, 2 back-offs</td></tr>
+<tr><td>Top speed (2.5 m/s command, speed rung)</td><td>r5 (attempt 2): froze; s7: ~1.65 m/s, 0/10</td><td>r13 @ 118.0M: 2.0 -&gt; 2.04, 2.5 -&gt; 2.36 m/s; exported r13 @ 118.0M: 30/30 on 30 seeds, 2.04 / 2.36 m/s</td></tr>
+<tr><td>Banked Oval, 4 racers, seeds 1-5</td><td>r7 bank policy: 20/20, 148.1-165.0 s, 1 back-off; bank eval 6/10</td><td>s7: 20/20, 138.5-149.9 s, no back-offs; bank eval 30/30 (now the Track03 policy)</td></tr>
+<tr><td>Unity parity (replay / closed loop)</td><td>-</td><td>fast 1.10e-6, steeple 1.67e-6 (tol 1e-4); closed-loop speed, cadence, force equal</td></tr>
+<tr><td>Runs with a NaN metric</td><td colspan="2">s8, r9 (r9 diverged at 91.7M and was stopped; that checkpoint was deleted, nothing after it is used)</td></tr>
+</table></div>
+
+<h2>Every gated checkpoint</h2>
+<div class="card"><table><tr><th>run</th><th>step (M)</th><th>steeple gate (300 seeds) and rungs</th></tr><tr><td>s4</td><td>22.9</td><td>STEEPLE: 86/100 passed (need 90), mean err 0.204, NaN episodes 0 -&gt; FAIL</td></tr><tr><td>s4</td><td>34.4</td><td>STEEPLE: 77/100 passed (need 90), mean err 0.248, NaN episodes 0 -&gt; FAIL</td></tr><tr><td>s4</td><td>45.9</td><td>STEEPLE: 84/100 passed (need 90), mean err 0.200, NaN episodes 0 -&gt; FAIL</td></tr><tr><td>s4</td><td>57.3</td><td>STEEPLE: 75/100 passed (need 90), mean err 0.225, NaN episodes 0 -&gt; FAIL</td></tr><tr><td>s5</td><td>11.5</td><td>STEEPLE: 85/100 passed (need 90), mean err 0.196, NaN episodes 0 -&gt; FAIL</td></tr><tr><td>s5</td><td>22.9</td><td>STEEPLE: 85/100 passed (need 90), mean err 0.192, NaN episodes 0 -&gt; FAIL</td></tr><tr><td>s5</td><td>34.4</td><td>STEEPLE: 88/100 passed (need 90), mean err 0.189, NaN episodes 0 -&gt; FAIL</td></tr><tr><td>s5</td><td>45.9</td><td>STEEPLE: 88/100 passed (need 90), mean err 0.186, NaN episodes 0 -&gt; FAIL</td></tr><tr><td>s5</td><td>57.3</td><td>STEEPLE: 86/100 passed (need 90), mean err 0.182, NaN episodes 0 -&gt; FAIL</td></tr><tr><td>s5</td><td>68.8</td><td>STEEPLE: 88/100 passed (need 90), mean err 0.180, NaN episodes 0 -&gt; FAIL</td></tr><tr><td>s5</td><td>80.3</td><td>STEEPLE: 94/100 passed (need 90), mean err 0.166, NaN episodes 0 -&gt; PASS</td></tr><tr><td>s5</td><td>91.8</td><td>STEEPLE: 85/100 passed (need 90), mean err 0.199, NaN episodes 0 -&gt; FAIL</td></tr><tr><td>s6</td><td>18.0</td><td>GATE300 273/300 (sets: 94 90 89) NaN 0 -&gt; FAIL</td></tr><tr><td>s6</td><td>36.0</td><td>GATE300 273/300 (sets: 89 91 93) NaN 0 -&gt; FAIL</td></tr><tr><td>s6</td><td>54.1</td><td>GATE300 273/300 (sets: 91 92 90) NaN 0 -&gt; GRADUATED</td></tr><tr><td>s7</td><td>9.8</td><td>GATE300 258/300 (sets: 88 85 85) NaN 0 -&gt; FAIL | R2: 27/30 BANK 15: 30/30 R1: 20/20 -&gt; NOT-SHIPPABLE</td></tr><tr><td>s7</td><td>19.7</td><td>GATE300 268/300 (sets: 88 91 89) NaN 0 -&gt; FAIL | R2: 30/30 BANK 15: 30/30 R1: 20/20 -&gt; NOT-SHIPPABLE   (corrected: set s100 crashed loading the model, re-run)</td></tr><tr><td>s7</td><td>29.5</td><td>GATE300 271/300 (sets: 91 91 89) NaN 0 -&gt; FAIL | R2: 30/30 BANK 15: 30/30 R1: 20/20 -&gt; NOT-SHIPPABLE</td></tr><tr><td>s7</td><td>39.3</td><td>GATE300 268/300 (sets: 88 90 90) NaN 0 -&gt; FAIL | R2: 29/30 BANK 15: 30/30 R1: 20/20 -&gt; NOT-SHIPPABLE</td></tr><tr><td>s7</td><td>49.2</td><td>GATE300 266/300 (sets: 90 88 88) NaN 0 -&gt; FAIL | R2: 30/30 BANK 15: 30/30 R1: 20/20 -&gt; NOT-SHIPPABLE</td></tr><tr><td>s7</td><td>59.0</td><td>GATE300 270/300 (sets: 93 87 90) NaN 0 -&gt; FAIL | R2: 30/30 BANK 15: 30/30 R1: 20/20 -&gt; NOT-SHIPPABLE</td></tr><tr><td>s7</td><td>68.8</td><td>GATE300 277/300 (sets: 94 91 92) NaN 0 -&gt; GRADUATED | R2: 30/30 BANK 15: 30/30 R1: 20/20 -&gt; ALL-PASS</td></tr><tr><td>s7</td><td>78.6</td><td>GATE300 272/300 (sets: 89 89 94) NaN 0 -&gt; FAIL | R2: 30/30 BANK 15: 30/30 R1: 20/20 -&gt; NOT-SHIPPABLE</td></tr><tr><td>s7</td><td>88.5</td><td>GATE300 271/300 (sets: 93 87 91) NaN 0 -&gt; FAIL | R2: 30/30 BANK 15: 30/30 R1: 20/20 -&gt; NOT-SHIPPABLE</td></tr><tr><td>s8</td><td>14.7</td><td>GATE300 273/300 (sets: 94 89 90) NaN 0 -&gt; FAIL | R2: 30/30 BANK 15: 30/30 R1: 20/20 -&gt; NOT-SHIPPABLE</td></tr><tr><td>s8</td><td>29.5</td><td>GATE300 277/300 (sets: 91 93 93) NaN 0 -&gt; GRADUATED | R2: 30/30 BANK 15: 30/30 R1: 20/20 -&gt; ALL-PASS</td></tr><tr><td>s8</td><td>44.2</td><td>GATE300 264/300 (sets: 85 87 92) NaN 0 -&gt; FAIL | R2: 30/30 BANK 15: 30/30 R1: 20/20 -&gt; NOT-SHIPPABLE</td></tr><tr><td>s8</td><td>59.0</td><td>GATE300 278/300 (sets: 94 88 96) NaN 0 -&gt; FAIL | R2: 30/30 BANK 15: 29/30 R1: 20/20 -&gt; NOT-SHIPPABLE</td></tr><tr><td>s8</td><td>73.7</td><td>GATE300 272/300 (sets: 86 92 94) NaN 0 -&gt; FAIL | R2: 29/30 BANK 15: 30/30 R1: 20/20 -&gt; NOT-SHIPPABLE</td></tr><tr><td>s9</td><td>11.5</td><td>GATE300 277/300 (sets: 94 91 92) NaN 0 -&gt; GRADUATED | R2: 29/30 BANK 15: 30/30 R1: 20/20 -&gt; ALL-PASS</td></tr><tr><td>s9</td><td>22.9</td><td>GATE300 269/300 (sets: 90 87 92) NaN 0 -&gt; FAIL | R2: 30/30 BANK 15: 30/30  -&gt; NOT-SHIPPABLE</td></tr><tr><td>s9</td><td>34.4</td><td>GATE300 263/300 (sets: 82 89 92) NaN 0 -&gt; FAIL | R2: 30/30  R1: 20/20 -&gt; NOT-SHIPPABLE</td></tr><tr><td>s10</td><td>9.8</td><td>GATE300 286/300 (sets: 98 92 96) NaN 0 -&gt; GRADUATED | R2: 29/30 BANK 15: 30/30 R1: 20/20 -&gt; ALL-PASS</td></tr><tr><td>s10</td><td>19.7</td><td>GATE300 276/300 (sets: 89 91 96) NaN 0 -&gt; FAIL | R2: 30/30  R1: 20/20 -&gt; NOT-SHIPPABLE</td></tr><tr><td>s10</td><td>29.5</td><td>GATE300 277/300 (sets: 90 92 95) NaN 0 -&gt; GRADUATED | R2: 30/30 BANK 15: 30/30 R1: 20/20 -&gt; ALL-PASS</td></tr><tr><td>s10</td><td>39.3</td><td>GATE300 271/300 (sets: 88 87 96) NaN 0 -&gt; FAIL | R2: 30/30 BANK 15: 30/30 R1: 20/20 -&gt; NOT-SHIPPABLE</td></tr><tr><td>s10</td><td>49.2</td><td>GATE300 273/300 (sets: 93 92 88) NaN 0 -&gt; FAIL | R2: 30/30 BANK 15: 30/30 R1: 20/20 -&gt; NOT-SHIPPABLE</td></tr></table></div>
+<div class="card"><table><tr><th>run</th><th>step (M)</th><th>speed rung and rungs</th></tr><tr><td>r8</td><td>11.5</td><td>SPEED: 0/10 | R1: 20/20 | R2: 30/30 | BANK 15: 30/30 (mean 2.0-&gt;1.62 2.5-&gt;1.73) -&gt; FAIL</td></tr><tr><td>r8</td><td>22.9</td><td>SPEED: 0/10 | R1: 20/20 | R2: 30/30 | BANK 15: 30/30 (mean 2.0-&gt;1.62 2.5-&gt;1.74) -&gt; FAIL</td></tr><tr><td>r9</td><td>11.5</td><td>SPEED: 0/10 | R1: 20/20 | R2: 30/30 | BANK 15: 30/30 (mean 2.0-&gt;1.75 2.5-&gt;1.81) -&gt; FAIL</td></tr><tr><td>r9</td><td>22.9</td><td>SPEED: 0/10 | R1: 20/20 | R2: 30/30 | BANK 15: 30/30 (mean 2.0-&gt;1.78 2.5-&gt;1.93) -&gt; FAIL</td></tr><tr><td>r9</td><td>34.4</td><td>SPEED: 0/10 | R1: 20/20 | R2: 30/30 | BANK 15: 30/30 (mean 2.0-&gt;1.84 2.5-&gt;2.02) -&gt; FAIL</td></tr><tr><td>r9</td><td>45.9</td><td>SPEED: 0/10 | R1: 20/20 | R2: 30/30 | BANK 15: 30/30 (mean 2.0-&gt;1.86 2.5-&gt;2.02) -&gt; FAIL</td></tr><tr><td>r9</td><td>57.3</td><td>SPEED: 0/10 | R1: 20/20 | R2: 30/30 | BANK 15: 30/30 (mean 2.0-&gt;1.88 2.5-&gt;2.07) -&gt; FAIL</td></tr><tr><td>r9</td><td>68.8</td><td>SPEED: 0/10 | R1: 20/20 | R2: 30/30 | BANK 15: 30/30 (mean 2.0-&gt;1.88 2.5-&gt;2.09) -&gt; FAIL</td></tr><tr><td>r9</td><td>80.3</td><td>SPEED: 0/10 | R1: 20/20 | R2: 30/30 | BANK 15: 30/30 (mean 2.0-&gt;1.88 2.5-&gt;2.08) -&gt; FAIL</td></tr><tr><td>r10</td><td>11.5</td><td>SPEED: 0/10 | R1: 20/20 | R2: 30/30 | BANK 15: 30/30 (mean 2.0-&gt;1.89 2.5-&gt;2.04) -&gt; FAIL</td></tr><tr><td>r10</td><td>22.9</td><td>SPEED: 0/10 | R1: 20/20 | R2: 30/30 | BANK 15: 30/30 (mean 2.0-&gt;1.91 2.5-&gt;2.07) -&gt; FAIL</td></tr><tr><td>r10</td><td>34.4</td><td>SPEED: 0/10 | R1: 20/20 | R2: 30/30 | BANK 15: 30/30 (mean 2.0-&gt;1.92 2.5-&gt;2.10) -&gt; FAIL</td></tr><tr><td>r10</td><td>45.9</td><td>SPEED: 0/10 | R1: 20/20 | R2: 30/30 | BANK 15: 30/30 (mean 2.0-&gt;1.92 2.5-&gt;2.12) -&gt; FAIL</td></tr><tr><td>r11</td><td>11.5</td><td>SPEED: 0/10 | R1: 20/20 | R2: 30/30 | BANK 15: 30/30 (mean 2.0-&gt;1.94 2.5-&gt;2.14) -&gt; FAIL</td></tr><tr><td>r11</td><td>22.9</td><td>SPEED: 0/10 | R1: 20/20 | R2: 30/30 | BANK 15: 30/30 (mean 2.0-&gt;1.95 2.5-&gt;2.12) -&gt; FAIL</td></tr><tr><td>r11</td><td>34.4</td><td>SPEED: 2/10 | R1: 20/20 | R2: 30/30 | BANK 15: 30/30 (mean 2.0-&gt;1.95 2.5-&gt;2.17) -&gt; FAIL</td></tr><tr><td>r11</td><td>45.9</td><td>SPEED: 0/10 | R1: 20/20 | R2: 30/30 | BANK 15: 30/30 (mean 2.0-&gt;1.95 2.5-&gt;2.14) -&gt; FAIL</td></tr><tr><td>r11</td><td>57.3</td><td>SPEED: 1/10 | R1: 20/20 | R2: 30/30 | BANK 15: 30/30 (mean 2.0-&gt;1.95 2.5-&gt;2.22) -&gt; FAIL</td></tr><tr><td>r11</td><td>68.8</td><td>SPEED: 0/10 | R1: 20/20 | R2: 30/30 | BANK 15: 30/30 (mean 2.0-&gt;1.96 2.5-&gt;2.22) -&gt; FAIL</td></tr><tr><td>r11</td><td>80.3</td><td>SPEED: 2/10 | R1: 20/20 | R2: 30/30 | BANK 15: 30/30 (mean 2.0-&gt;1.96 2.5-&gt;2.21) -&gt; FAIL</td></tr><tr><td>r11</td><td>91.8</td><td>SPEED: 2/10 | R1: 20/20 | R2: 30/30 | BANK 15: 30/30 (mean 2.0-&gt;1.98 2.5-&gt;2.21) -&gt; FAIL</td></tr><tr><td>r12</td><td>18.0</td><td>SPEED: 4/10 | R1: 20/20 | R2: 30/30 | BANK 15: 30/30 (mean 2.0-&gt;1.95 2.5-&gt;2.23) -&gt; FAIL</td></tr><tr><td>r12</td><td>36.0</td><td>SPEED: 5/10 | R1: 20/20 | R2: 30/30 | BANK 15: 30/30 (mean 2.0-&gt;1.98 2.5-&gt;2.25) -&gt; FAIL</td></tr><tr><td>r12</td><td>54.1</td><td>SPEED: 8/10 | R1: 20/20 | R2: 30/30 | BANK 15: 30/30 (mean 2.0-&gt;1.97 2.5-&gt;2.27) -&gt; FAIL   (corrected: R1 summary was missed by the parser)</td></tr><tr><td>r12</td><td>72.1</td><td>SPEED: 3/10 | R1: 20/20 | R2: 30/30 | BANK 15: 30/30 (mean 2.0-&gt;1.98 2.5-&gt;2.21) -&gt; FAIL</td></tr><tr><td>r13</td><td>14.7</td><td>SPEED: 3/10 | R1: 20/20 | R2: 30/30 | BANK 15: 30/30 (mean 2.0-&gt;2.00 2.5-&gt;2.18) -&gt; FAIL</td></tr><tr><td>r13</td><td>29.5</td><td>SPEED: 6/10 | R1: 20/20 | R2: 30/30 | BANK 15: 30/30 (mean 2.0-&gt;2.01 2.5-&gt;2.26) -&gt; FAIL</td></tr><tr><td>r13</td><td>44.2</td><td>SPEED: 10/10 | R1: 20/20 | R2: 30/30 | BANK 15: 30/30 (mean 2.0-&gt;2.02 2.5-&gt;2.31) -&gt; ALL-PASS</td></tr><tr><td>r13</td><td>59.0</td><td>SPEED: 6/10 | R1: 20/20 | R2: 30/30 | BANK 15: 30/30 (mean 2.0-&gt;2.02 2.5-&gt;2.26) -&gt; FAIL</td></tr><tr><td>r13</td><td>73.7</td><td>SPEED: 9/10 | R1: 20/20 | R2: 30/30 | BANK 15: 30/30 (mean 2.0-&gt;2.00 2.5-&gt;2.31) -&gt; ALL-PASS</td></tr><tr><td>r13</td><td>88.5</td><td>SPEED: 8/10 | R1: 20/20 | R2: 30/30 | BANK 15: 30/30 (mean 2.0-&gt;2.00 2.5-&gt;2.29) -&gt; FAIL</td></tr><tr><td>r13</td><td>103.2</td><td>SPEED: 8/10 | R1: 20/20 | R2: 30/30 | BANK 15: 30/30 (mean 2.0-&gt;2.03 2.5-&gt;2.34) -&gt; FAIL</td></tr><tr><td>r13</td><td>118.0</td><td>SPEED: 10/10 | R1: 20/20 | R2: 30/30 | BANK 15: 30/30 (mean 2.0-&gt;2.04 2.5-&gt;2.36) -&gt; ALL-PASS</td></tr><tr><td>r13</td><td>132.7</td><td>SPEED: 9/10 | R1: 20/20 | R2: 30/30 | BANK 15: 30/30 (mean 2.0-&gt;2.03 2.5-&gt;2.34) -&gt; ALL-PASS</td></tr></table></div>
+</main></body></html>

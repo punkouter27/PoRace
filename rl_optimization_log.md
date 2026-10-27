@@ -273,3 +273,18 @@ New pass bar, `eval.py --rung speed`: from standstill (joint offsets as R1), 2.0
 - Lower effort penalties mean more power at speed (cost of transport not yet measured in Unity).
 - **Update: r13 final checkpoint @ 118.0M replaces 73.7M.** Speed rung 30/30 (mean 2.04 / 2.36 m/s, every seed above 2.25 on the 2.5 command), R0 10/10, R1 20/20, R2 30/30, bank 30/30, no NaN. `go2_loco_fast.onnx` / `go2_fast_params.pkl` re-exported from it.
 - **Unity parity (C.9 gate) for both new policies**, headless Testbed players built with `PolicyAssign` (Testbed scene restored afterwards): `go2_loco_fast` (r13 @ 118.0M) replay worst |da| 1.10e-6 (tol 1e-4), closed loop at 2.0 m/s for 5 s: mean vx 1.93552 / 1.93551, cadence, force and min z equal -> PASS. `go2_loco_steeple` (s7 @ 68.8M) replay 1.67e-6, closed loop at 1.5 m/s: mean vx 1.31624 / 1.31624 -> PASS. Trajectories: `docs/parity/reference_{fast,steeple}.json`, `unity_closed_loop_{fast,steeple}.json`.
+
+## 2026-10-27 (cont.) Steeplechase polish s8-s10: plateau at ~91-93 %, s7 kept; get-up re-checked
+
+All from s7 @ 68.8M with the s7 flags, every checkpoint through `gateall.sh` (steeple 300 + R2 + bank + R1).
+
+| run | change | checkpoints (steeple /300) | outcome |
+|---|---|---|---|
+| s8 | lr 5e-5 | 273, 277 (grad.), 264, 278 (one set 88), 272 | **NaN at 88.5M**, stopped, checkpoint deleted |
+| s9 | swing 0.14, p_outer 0.7 | 277, 269, 263 | worse every checkpoint, stopped |
+| s10 | entropy 0.01 -> 0.005 | **286 (98/92/96)**, 276, 277, 271, ... | 286 did not hold up on fresh seeds (below) |
+
+- Head-to-head on seeds 300-499 (never used for picking): s10 @ 9.8M 85 + 93 = 178/200, s7 @ 68.8M 92 + 89 = 181/200. Over all 500 seeds: s10 464 (92.8 %), s7 458 (91.6 %) - within noise. **s7 stays** (already through Unity races and parity). s7's true pass rate is ~91-92 %: a single 100-seed set can land at 89.
+- NaN divergence, third time in this chain (s3 @ 3e-4, r9 @ 1e-4, s8 @ 5e-5): not a learning-rate problem. The watchers stop the run and nothing after the NaN is used. Follow-up: find the env that blows up first (`nan_probe.py`) and guard the training batch, not just the termination test.
+- Get-up policy (`final/go2_getup_params.pkl`): R3 30/30. No training needed.
+- Not trained: G1 biped (`G1Testbed.unity` has no policy). Its trainer model collides on the feet only, while the project rules require primitive colliders and self-collision on all non-adjacent segment pairs before training; that collider design needs an owner decision.

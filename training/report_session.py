@@ -15,13 +15,14 @@ from tensorboard.backend.event_processing.event_accumulator import EventAccumula
 
 ROOT = Path(__file__).resolve().parent
 OUT = Path("/docs/report/session_20261027.html") if Path("/docs").exists() else ROOT.parent / "docs" / "report" / "session_20261027.html"
-STEEPLE = {"s4": "#9ca3af", "s5": "#d97706", "s6": "#7c3aed", "s7": "#2563eb"}
-SPEED = {"r8": "#9ca3af", "r9": "#d97706", "r10": "#059669"}
+STEEPLE = {"s4": "#9ca3af", "s5": "#d97706", "s6": "#7c3aed", "s7": "#2563eb", "s8": "#0891b2", "s9": "#dc2626", "s10": "#65a30d"}
+SPEED = {"r8": "#9ca3af", "r9": "#d97706", "r10": "#7c3aed", "r11": "#db2777", "r12": "#0891b2", "r13": "#059669"}
 LABEL = {"s4": "s4: lr 1e-4, outer spawns", "s5": "s5: swing 0.13 m", "s6": "s6: continue", "s7": "s7: pushes to 7 m/s",
-         "r8": "r8: speed-scaled sigma", "r9": "r9: sharp sigma, progress x2", "r10": "r10: lr 5e-5"}
+         "s8": "s8: lr 5e-5 polish", "s9": "s9: swing 0.14, outer 0.7", "s10": "s10: entropy 0.005", "r8": "r8: speed-scaled sigma", "r9": "r9: sharp sigma, progress x2", "r10": "r10: lr 5e-5",
+         "r11": "r11: effort penalties x0.25", "r12": "r12: continue", "r13": "r13: progress x3, lr 5e-5"}
 # Steps restarted from: each run continues the previous best, so the x axis is cumulative steps since s2 @ 68.8M / s7 @ 68.8M.
-OFFSET = {"s4": 0, "s5": 22.9e6, "s6": 22.9e6 + 80.3e6, "s7": 22.9e6 + 80.3e6 + 54.1e6,
-          "r8": 0, "r9": 0, "r10": 68.8e6}
+OFFSET = {"s4": 0, "s5": 22.9e6, "s6": 22.9e6 + 80.3e6, "s7": 22.9e6 + 80.3e6 + 54.1e6, "s8": 22.9e6 + 80.3e6 + 54.1e6 + 68.8e6, "s9": 22.9e6 + 80.3e6 + 54.1e6 + 68.8e6, "s10": 22.9e6 + 80.3e6 + 54.1e6 + 68.8e6,
+          "r8": 0, "r9": 0, "r10": 68.8e6, "r11": 68.8e6 + 45.9e6, "r12": 68.8e6 + 45.9e6 + 103.2e6, "r13": 68.8e6 + 45.9e6 + 103.2e6 + 54.1e6}
 
 
 def scalars(run, tag):
@@ -142,7 +143,9 @@ on the CPU while the next one trained (<code>training/autogate.sh</code>). Tenso
 <tr><td>Steeplechase gate</td><td>s2 @ 68.8M: 82/100 (shipped ungraduated)</td><td>s7 @ 68.8M: 277/300 on three held-out sets (94 / 91 / 92), 0 NaN</td></tr>
 <tr><td>R2 (30 N.s push + 1 kg cube)</td><td>s2: 10/10 (x10); s6: 23/30</td><td>s7: 30/30</td></tr>
 <tr><td>Track04, 4 racers, headless</td><td>s2: 20/20 finish (seeds 1-5), 89.5-226.9 s, up to 65 un-sticks</td><td>s7: 40/40 finish (seeds 1-10), 77.5-158.5 s, 2 back-offs</td></tr>
-<tr><td>Top speed (2.5 m/s command)</td><td>r5 (attempt 2): froze; s7: ~1.7 m/s</td><td>{html.escape(best)}</td></tr>
+<tr><td>Top speed (2.5 m/s command, speed rung)</td><td>r5 (attempt 2): froze; s7: ~1.65 m/s, 0/10</td><td>{html.escape(best)}; exported r13 @ 118.0M: 30/30 on 30 seeds, 2.04 / 2.36 m/s</td></tr>
+<tr><td>Banked Oval, 4 racers, seeds 1-5</td><td>r7 bank policy: 20/20, 148.1-165.0 s, 1 back-off; bank eval 6/10</td><td>s7: 20/20, 138.5-149.9 s, no back-offs; bank eval 30/30 (now the Track03 policy)</td></tr>
+<tr><td>Unity parity (replay / closed loop)</td><td>-</td><td>fast 1.10e-6, steeple 1.67e-6 (tol 1e-4); closed-loop speed, cadence, force equal</td></tr>
 <tr><td>Runs with a NaN metric</td><td colspan="2">{", ".join(nan_runs) or "none"} (r9 diverged at 91.7M and was stopped; that checkpoint was deleted, nothing after it is used)</td></tr>
 </table></div>
 
