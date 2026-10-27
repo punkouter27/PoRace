@@ -26,7 +26,8 @@ public class RaceDirector : MonoBehaviour {
   public Shot Current { get; private set; } = Shot.Pack;
   public Racer Subject { get; private set; }
   Racer _other; float _since, _score, _slowUntil, _lastOverhead = -100f; int _bumps, _rotation;
-  Vector3 _fixed, _vel; float _fixedS, _orbit, _shakeAmp, _shakeUntil;
+  Vector3 _fixed, _vel, _shakeOffset; float _fixedS, _orbit, _trauma, _shakeRoll;
+  public float maxShakeOffset = 0.12f, maxShakeRoll = 2.5f, traumaDecay = 1.4f;
   Camera _cam; Text _label; Button _labelButton;
   bool _inReplay;
 
@@ -50,7 +51,10 @@ public class RaceDirector : MonoBehaviour {
   /// <summary>Instant replay takes the camera (RaceReplay): orbit the subject while frames play back.</summary>
   public void BeginReplay(Racer subject) { _inReplay = true; Cut(Shot.Replay, subject, null, 100f); }
   public void EndReplay() { _inReplay = false; Cut(Shot.Pack, null, null, 0f); }
-  public void Shake(float amplitude, float seconds) { _shakeAmp = Mathf.Max(_shakeAmp, amplitude); _shakeUntil = Time.unscaledTime + seconds; }
+  /// <summary>H.1 camera shake: trauma 0..1 adds up from every source and decays at traumaDecay per second; the shake
+  /// is trauma squared, so small knocks stay subtle and pile-ups shake hard.</summary>
+  public void AddTrauma(float amount) { if (amount > 0f) _trauma = Mathf.Min(1f, _trauma + amount); }
+  public void Shake(float amplitude, float seconds) => AddTrauma(amplitude * seconds * 12f);
 
   void Want(Shot shot, Racer subject, Racer other, float score) {
     if (!auto || _inReplay || race.Phase == RacePhase.Countdown) return;
@@ -79,6 +83,7 @@ public class RaceDirector : MonoBehaviour {
   Vector3 Fwd(Racer r) { race.map.PointAt(r.distance, out var t); return new Vector3(t.x, 0f, t.y); }
 
   void Update() {
+    UndoShake();
     if (Keyboard.current != null && Keyboard.current.cKey.wasPressedThisFrame) {
       if (auto) auto = false;
       else { var all = new[] { Shot.Pack, Shot.Leader, Shot.Trackside, Shot.Overhead }; Cut(all[(System.Array.IndexOf(all, Current) + 1) % all.Length], race.Leader(), null, 0f); }
@@ -141,10 +146,23 @@ public class RaceDirector : MonoBehaviour {
 
   float Held() => Time.unscaledTime - _since;
 
+  /// <summary>Perlin offset and roll on top of whoever placed the camera this frame (FollowCam or a shot above).</summary>
   void ApplyShake() {
-    if (_cam == null || Time.unscaledTime > _shakeUntil) return;
-    float k = (_shakeUntil - Time.unscaledTime) * _shakeAmp;
-    _cam.transform.position += new Vector3(Mathf.PerlinNoise(Time.unscaledTime * 30f, 0f) - 0.5f, Mathf.PerlinNoise(0f, Time.unscaledTime * 30f) - 0.5f, 0f) * k;
+    if (_cam == null || _trauma <= 0f) return;
+    float s = _trauma * _trauma, t = Time.unscaledTime * 22f; var tr = _cam.transform;
+    float N(float seed) => Mathf.PerlinNoise(t, seed) * 2f - 1f;
+    _shakeOffset = tr.rotation * new Vector3(N(1.3f), N(7.1f), 0f) * (maxShakeOffset * s);
+    _shakeRoll = N(13.7f) * maxShakeRoll * s;
+    tr.position += _shakeOffset; tr.rotation *= Quaternion.Euler(0f, 0f, _shakeRoll);
+    _trauma = Mathf.Max(0f, _trauma - traumaDecay * Time.unscaledDeltaTime);
+  }
+
+  /// <summary>Takes last frame's shake back out before FollowCam / the shots smooth from the camera's position, so the
+  /// offsets never feed into the camera path.</summary>
+  void UndoShake() {
+    if (_cam == null || (_shakeOffset == Vector3.zero && _shakeRoll == 0f)) return;
+    var tr = _cam.transform; tr.rotation *= Quaternion.Euler(0f, 0f, -_shakeRoll); tr.position -= _shakeOffset;
+    _shakeOffset = Vector3.zero; _shakeRoll = 0f;
   }
 }
 

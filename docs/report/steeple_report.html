@@ -1,0 +1,148 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Steeplechase Training Report</title><style>
+:root{--bg:#f6f7f9;--card:#fff;--ink:#1d2330;--muted:#5d6675;--line:#dde1e7}
+@media (prefers-color-scheme:dark){:root{--bg:#12151b;--card:#1b2029;--ink:#e8ebf0;--muted:#9aa3b2;--line:#2c3340}}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:980px;margin:0 auto;padding:24px 16px 60px} h1{font-size:26px;margin:0} h2{font-size:19px;margin:30px 0 8px}
+.lede{color:var(--muted)} .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin:10px 0;overflow-x:auto}
+svg{width:100%;height:auto} .ct{font-weight:600;fill:var(--ink);font-size:14px} .tk{fill:var(--muted);font-size:11px} .gl{stroke:var(--line)} .bar{stroke:#dc2626;stroke-dasharray:5 4}
+.legend{font-size:13px;color:var(--muted)} .key{margin-right:16px} .key i{display:inline-block;width:12px;height:12px;border-radius:2px;margin-right:6px;vertical-align:-1px}
+table{border-collapse:collapse;width:100%;font-size:14px} th,td{text-align:left;padding:7px 9px;border-bottom:1px solid var(--line)} th{color:var(--muted)}
+ul.tiers{list-style:none;padding:0} ul.tiers li{padding:8px 10px;border-radius:8px;margin:6px 0;background:var(--card);border:1px solid var(--line)}
+li.ok b{color:#059669} li.no b{color:#dc2626} code{font-size:13px}
+</style></head><body><main>
+<h1>Steeplechase policy: training report</h1>
+<p class="lede">Generated 2026-10-27. Blind (proprioceptive, same 48-dim obs) Go2 locomotion on a 28 x 28 m field of static
+MuJoCo boxes: hurdles and steps 3-8 cm, rubble 2-5 cm (<code>training/make_steeple.py</code>). Both runs start from the bank policy
+r7 @ 29.5M with pushes, cubes, domain randomization and slopes to 17 deg kept on; 1024 envs on an RTX 2060, editor closed.
+Gate: <code>eval.py --rung steeple</code>, 1.0 / 0.8+turn / 1.3 m/s, upright and mean tracking error under 0.35 m/s;
+graduation = 90 of 100 consecutive episodes with zero NaN.</p>
+
+<h2>Milestones</h2>
+<ul class="tiers">
+<li class="ok"><b>reached</b> <b>Toddler / Beginner</b>: still walks at the commanded speed on flat ground after obstacle training (R1 9/10 or better).</li>
+<li class="ok"><b>reached</b> <b>Child / Intermediate</b>: beats the starting policy on the obstacle field (more than 15/20).</li>
+<li class="no"><b>not reached</b> <b>Adult / Advanced</b>: graduation gate, 90/100 episodes and zero NaN; ONNX exported for Map 04.</li>
+</ul>
+
+<h2>Top 3 metrics</h2>
+<div class="card"><svg viewBox="0 0 680 300" role="img" aria-label="Steeplechase pass rate per checkpoint (20 episodes)"><text x="60" y="22" class="ct">Steeplechase pass rate per checkpoint (20 episodes)</text>
+<line x1="60" y1="260.0" x2="660" y2="260.0" class="gl"/><text x="54" y="264.0" class="tk" text-anchor="end">-10.8</text>
+<line x1="60" y1="205.0" x2="660" y2="205.0" class="gl"/><text x="54" y="209.0" class="tk" text-anchor="end">17.1</text>
+<line x1="60" y1="150.0" x2="660" y2="150.0" class="gl"/><text x="54" y="154.0" class="tk" text-anchor="end">45</text>
+<line x1="60" y1="95.0" x2="660" y2="95.0" class="gl"/><text x="54" y="99.0" class="tk" text-anchor="end">72.9</text>
+<line x1="60" y1="40.0" x2="660" y2="40.0" class="gl"/><text x="54" y="44.0" class="tk" text-anchor="end">101</text>
+<text x="60.0" y="276" class="tk" text-anchor="middle">0M</text>
+<text x="180.0" y="276" class="tk" text-anchor="middle">21M</text>
+<text x="300.0" y="276" class="tk" text-anchor="middle">43M</text>
+<text x="420.0" y="276" class="tk" text-anchor="middle">64M</text>
+<text x="540.0" y="276" class="tk" text-anchor="middle">85M</text>
+<text x="660.0" y="276" class="tk" text-anchor="middle">106M</text>
+<text x="370" y="294" class="tk" text-anchor="middle">training steps</text>
+<text transform="translate(14,150) rotate(-90)" class="tk" text-anchor="middle">% passed</text>
+<line x1="60" y1="61.3" x2="660" y2="61.3" class="bar"/><text x="656" y="56.3" class="tk" text-anchor="end">graduation 90 %</text>
+<polyline fill="none" stroke="#d97706" stroke-width="2.5" points="254.2,238.7 383.4,238.7 448.3,238.7 578.2,238.7 642.5,238.7"/>
+<circle cx="254.2" cy="238.7" r="3.5" fill="#d97706"><title>s1 34.4M: 0</title></circle>
+<circle cx="383.4" cy="238.7" r="3.5" fill="#d97706"><title>s1 57.3M: 0</title></circle>
+<circle cx="448.3" cy="238.7" r="3.5" fill="#d97706"><title>s1 68.8M: 0</title></circle>
+<circle cx="578.2" cy="238.7" r="3.5" fill="#d97706"><title>s1 91.8M: 0</title></circle>
+<circle cx="642.5" cy="238.7" r="3.5" fill="#d97706"><title>s1 103.2M: 0</title></circle>
+<polyline fill="none" stroke="#2563eb" stroke-width="2.5" points="124.9,110.6 189.3,81.0 254.2,81.0 319.1,81.0 383.4,90.9 448.3,61.3 513.3,90.9 578.2,81.0 642.5,100.7"/>
+<circle cx="124.9" cy="110.6" r="3.5" fill="#2563eb"><title>s2 11.5M: 65</title></circle>
+<circle cx="189.3" cy="81.0" r="3.5" fill="#2563eb"><title>s2 22.9M: 80</title></circle>
+<circle cx="254.2" cy="81.0" r="3.5" fill="#2563eb"><title>s2 34.4M: 80</title></circle>
+<circle cx="319.1" cy="81.0" r="3.5" fill="#2563eb"><title>s2 45.9M: 80</title></circle>
+<circle cx="383.4" cy="90.9" r="3.5" fill="#2563eb"><title>s2 57.3M: 75</title></circle>
+<circle cx="448.3" cy="61.3" r="3.5" fill="#2563eb"><title>s2 68.8M: 90</title></circle>
+<circle cx="513.3" cy="90.9" r="3.5" fill="#2563eb"><title>s2 80.3M: 75</title></circle>
+<circle cx="578.2" cy="81.0" r="3.5" fill="#2563eb"><title>s2 91.8M: 80</title></circle>
+<circle cx="642.5" cy="100.7" r="3.5" fill="#2563eb"><title>s2 103.2M: 70</title></circle>
+</svg><div class="legend"><span class="key"><i style="background:#d97706"></i>s1: obstacles, swing 0.12 m</span> <span class="key"><i style="background:#2563eb"></i>s2: + progress reward, graded field</span></div></div>
+<div class="card"><svg viewBox="0 0 680 300" role="img" aria-label="Eval episode reward"><text x="60" y="22" class="ct">Eval episode reward</text>
+<line x1="60" y1="260.0" x2="660" y2="260.0" class="gl"/><text x="54" y="264.0" class="tk" text-anchor="end">13.1</text>
+<line x1="60" y1="205.0" x2="660" y2="205.0" class="gl"/><text x="54" y="209.0" class="tk" text-anchor="end">17.4</text>
+<line x1="60" y1="150.0" x2="660" y2="150.0" class="gl"/><text x="54" y="154.0" class="tk" text-anchor="end">21.6</text>
+<line x1="60" y1="95.0" x2="660" y2="95.0" class="gl"/><text x="54" y="99.0" class="tk" text-anchor="end">25.9</text>
+<line x1="60" y1="40.0" x2="660" y2="40.0" class="gl"/><text x="54" y="44.0" class="tk" text-anchor="end">30.1</text>
+<text x="60.0" y="276" class="tk" text-anchor="middle">0M</text>
+<text x="180.0" y="276" class="tk" text-anchor="middle">21M</text>
+<text x="300.0" y="276" class="tk" text-anchor="middle">43M</text>
+<text x="420.0" y="276" class="tk" text-anchor="middle">64M</text>
+<text x="540.0" y="276" class="tk" text-anchor="middle">85M</text>
+<text x="660.0" y="276" class="tk" text-anchor="middle">106M</text>
+<text x="370" y="294" class="tk" text-anchor="middle">training steps</text>
+<text transform="translate(14,150) rotate(-90)" class="tk" text-anchor="middle">reward</text>
+<polyline fill="none" stroke="#d97706" stroke-width="2.5" points="60.0,233.5 124.7,237.5 189.4,238.7 254.2,231.9 318.9,225.1 383.6,228.7 448.3,218.2 513.1,231.7 577.8,218.9 642.5,228.4"/>
+<circle cx="60.0" cy="233.5" r="3.5" fill="#d97706"><title>s1 0.0M: 15.2</title></circle>
+<circle cx="124.7" cy="237.5" r="3.5" fill="#d97706"><title>s1 11.5M: 14.9</title></circle>
+<circle cx="189.4" cy="238.7" r="3.5" fill="#d97706"><title>s1 22.9M: 14.8</title></circle>
+<circle cx="254.2" cy="231.9" r="3.5" fill="#d97706"><title>s1 34.4M: 15.3</title></circle>
+<circle cx="318.9" cy="225.1" r="3.5" fill="#d97706"><title>s1 45.9M: 15.8</title></circle>
+<circle cx="383.6" cy="228.7" r="3.5" fill="#d97706"><title>s1 57.3M: 15.6</title></circle>
+<circle cx="448.3" cy="218.2" r="3.5" fill="#d97706"><title>s1 68.8M: 16.4</title></circle>
+<circle cx="513.1" cy="231.7" r="3.5" fill="#d97706"><title>s1 80.3M: 15.3</title></circle>
+<circle cx="577.8" cy="218.9" r="3.5" fill="#d97706"><title>s1 91.8M: 16.3</title></circle>
+<circle cx="642.5" cy="228.4" r="3.5" fill="#d97706"><title>s1 103.2M: 15.6</title></circle>
+<polyline fill="none" stroke="#2563eb" stroke-width="2.5" points="60.0,62.3 124.7,67.3 189.4,89.7 254.2,65.0 318.9,79.3 383.6,82.5 448.3,61.3 513.1,98.4 577.8,84.5 642.5,62.5"/>
+<circle cx="60.0" cy="62.3" r="3.5" fill="#2563eb"><title>s2 0.0M: 28.4</title></circle>
+<circle cx="124.7" cy="67.3" r="3.5" fill="#2563eb"><title>s2 11.5M: 28</title></circle>
+<circle cx="189.4" cy="89.7" r="3.5" fill="#2563eb"><title>s2 22.9M: 26.3</title></circle>
+<circle cx="254.2" cy="65.0" r="3.5" fill="#2563eb"><title>s2 34.4M: 28.2</title></circle>
+<circle cx="318.9" cy="79.3" r="3.5" fill="#2563eb"><title>s2 45.9M: 27.1</title></circle>
+<circle cx="383.6" cy="82.5" r="3.5" fill="#2563eb"><title>s2 57.3M: 26.8</title></circle>
+<circle cx="448.3" cy="61.3" r="3.5" fill="#2563eb"><title>s2 68.8M: 28.5</title></circle>
+<circle cx="513.1" cy="98.4" r="3.5" fill="#2563eb"><title>s2 80.3M: 25.6</title></circle>
+<circle cx="577.8" cy="84.5" r="3.5" fill="#2563eb"><title>s2 91.8M: 26.7</title></circle>
+<circle cx="642.5" cy="62.5" r="3.5" fill="#2563eb"><title>s2 103.2M: 28.4</title></circle>
+</svg><div class="legend"><span class="key"><i style="background:#d97706"></i>s1: obstacles, swing 0.12 m</span> <span class="key"><i style="background:#2563eb"></i>s2: + progress reward, graded field</span></div></div>
+<div class="card"><svg viewBox="0 0 680 300" role="img" aria-label="Velocity tracking reward (the term that collapses when the policy creeps or freezes)"><text x="60" y="22" class="ct">Velocity tracking reward (the term that collapses when the policy creeps or freezes)</text>
+<line x1="60" y1="260.0" x2="660" y2="260.0" class="gl"/><text x="54" y="264.0" class="tk" text-anchor="end">578</text>
+<line x1="60" y1="205.0" x2="660" y2="205.0" class="gl"/><text x="54" y="209.0" class="tk" text-anchor="end">613</text>
+<line x1="60" y1="150.0" x2="660" y2="150.0" class="gl"/><text x="54" y="154.0" class="tk" text-anchor="end">647</text>
+<line x1="60" y1="95.0" x2="660" y2="95.0" class="gl"/><text x="54" y="99.0" class="tk" text-anchor="end">681</text>
+<line x1="60" y1="40.0" x2="660" y2="40.0" class="gl"/><text x="54" y="44.0" class="tk" text-anchor="end">715</text>
+<text x="60.0" y="276" class="tk" text-anchor="middle">0M</text>
+<text x="180.0" y="276" class="tk" text-anchor="middle">21M</text>
+<text x="300.0" y="276" class="tk" text-anchor="middle">43M</text>
+<text x="420.0" y="276" class="tk" text-anchor="middle">64M</text>
+<text x="540.0" y="276" class="tk" text-anchor="middle">85M</text>
+<text x="660.0" y="276" class="tk" text-anchor="middle">106M</text>
+<text x="370" y="294" class="tk" text-anchor="middle">training steps</text>
+<text transform="translate(14,150) rotate(-90)" class="tk" text-anchor="middle">reward term</text>
+<polyline fill="none" stroke="#d97706" stroke-width="2.5" points="60.0,189.7 124.7,210.8 189.4,237.9 254.2,197.5 318.9,178.3 383.6,232.8 448.3,180.9 513.1,235.2 577.8,189.6 642.5,238.7"/>
+<circle cx="60.0" cy="189.7" r="3.5" fill="#d97706"><title>s1 0.0M: 622</title></circle>
+<circle cx="124.7" cy="210.8" r="3.5" fill="#d97706"><title>s1 11.5M: 609</title></circle>
+<circle cx="189.4" cy="237.9" r="3.5" fill="#d97706"><title>s1 22.9M: 592</title></circle>
+<circle cx="254.2" cy="197.5" r="3.5" fill="#d97706"><title>s1 34.4M: 617</title></circle>
+<circle cx="318.9" cy="178.3" r="3.5" fill="#d97706"><title>s1 45.9M: 629</title></circle>
+<circle cx="383.6" cy="232.8" r="3.5" fill="#d97706"><title>s1 57.3M: 595</title></circle>
+<circle cx="448.3" cy="180.9" r="3.5" fill="#d97706"><title>s1 68.8M: 628</title></circle>
+<circle cx="513.1" cy="235.2" r="3.5" fill="#d97706"><title>s1 80.3M: 594</title></circle>
+<circle cx="577.8" cy="189.6" r="3.5" fill="#d97706"><title>s1 91.8M: 622</title></circle>
+<circle cx="642.5" cy="238.7" r="3.5" fill="#d97706"><title>s1 103.2M: 592</title></circle>
+<polyline fill="none" stroke="#2563eb" stroke-width="2.5" points="60.0,156.3 124.7,109.9 189.4,155.9 254.2,81.3 318.9,121.9 383.6,112.7 448.3,61.3 513.1,134.6 577.8,109.5 642.5,76.5"/>
+<circle cx="60.0" cy="156.3" r="3.5" fill="#2563eb"><title>s2 0.0M: 643</title></circle>
+<circle cx="124.7" cy="109.9" r="3.5" fill="#2563eb"><title>s2 11.5M: 672</title></circle>
+<circle cx="189.4" cy="155.9" r="3.5" fill="#2563eb"><title>s2 22.9M: 643</title></circle>
+<circle cx="254.2" cy="81.3" r="3.5" fill="#2563eb"><title>s2 34.4M: 689</title></circle>
+<circle cx="318.9" cy="121.9" r="3.5" fill="#2563eb"><title>s2 45.9M: 664</title></circle>
+<circle cx="383.6" cy="112.7" r="3.5" fill="#2563eb"><title>s2 57.3M: 670</title></circle>
+<circle cx="448.3" cy="61.3" r="3.5" fill="#2563eb"><title>s2 68.8M: 702</title></circle>
+<circle cx="513.1" cy="134.6" r="3.5" fill="#2563eb"><title>s2 80.3M: 656</title></circle>
+<circle cx="577.8" cy="109.5" r="3.5" fill="#2563eb"><title>s2 91.8M: 672</title></circle>
+<circle cx="642.5" cy="76.5" r="3.5" fill="#2563eb"><title>s2 103.2M: 692</title></circle>
+</svg><div class="legend"><span class="key"><i style="background:#d97706"></i>s1: obstacles, swing 0.12 m</span> <span class="key"><i style="background:#2563eb"></i>s2: + progress reward, graded field</span></div></div>
+
+<h2>Deltas against the starting policy</h2>
+<div class="card"><table><tr><th>policy</th><th>step (M)</th><th>steeple</th><th>bank 15 deg</th><th>R1 flat</th><th>R2 push+cube</th><th>speed asked -> reached</th><th>note</th></tr>
+<tr><td>start: r7 @ 29.5M (bank policy)</td><td>-</td><td>15/20</td><td>6/10</td><td>10/10</td><td>10/10</td><td>1.5->1.36, 2.0->1.52</td><td>rl_optimization_log.md</td></tr><tr><td>s1 best checkpoint</td><td>34.4</td><td>0/20</td><td>3/10</td><td>10/10</td><td>10/10</td><td>1.5-&gt;1.26, 2.0-&gt;0.00, 2.5-&gt;-0.00</td><td>gate failed</td></tr><tr><td>s2 best checkpoint</td><td>68.8</td><td>18/20</td><td>10/10</td><td>10/10</td><td>10/10</td><td>1.5-&gt;1.43, 2.0-&gt;1.71, 2.5-&gt;1.75</td><td>STEEPLE: 82/100 passed (need 90), mean err 0.235, NaN episodes 0 -&gt; FAIL</td></tr></table></div>
+<p class="lede">NaN resets during evaluation: s1 0, s2 0.</p>
+
+<h2>What happened</h2>
+<div class="card"><p><b>s1 failed.</b> With a 0.12 m swing target and only the Gaussian tracking term, the policy learned to cross the field slowly
+(34M: 0/20 steeple, every episode about 0.45 m/s under the command) and then to stand still: from 68.8M it no longer walks at 1.5 m/s even on flat
+ground (R1 5/10, then 2/10). On rough ground a fall costs more than creeping, and exp(-err^2/0.25) has almost no slope once the error is large,
+so nothing pulled the speed back up. Training reward still rose (15.2 to 16.4), which is why the reward curve alone looked fine.</p>
+<p><b>s2 changes:</b> a progress term (fraction of the commanded speed made along the command, 0..1, weight 1, steeple only), the original 0.10 m
+swing target, and a field whose obstacle heights grow from 25 % at the centre to full height at the edge, so every batch mixes easy and hard ground.</p></div>
+</main></body></html>

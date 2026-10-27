@@ -89,7 +89,7 @@ Mark `[x]` when done. Each task is one commit.
 - [x] G.7 `RaceReplay`: 8 s qpos ring buffer, paused kinematic replay with mjData snapshot/restore; time-trial ghost (best run per map, persistentDataPath).
 - [x] G.8 `RaceTelemetry`: 10 Hz JSONL + summary (CoT, cadence, peak effort, falls, passes), stats card, optional Azure Table upload (`-azureTableSas` / `PORACE_AZURE_TABLE_SAS`; not exercised against a real account).
 - [x] G.9 `RaceAudio`: synthesised footsteps / servo whine / impacts / crowd / countdown beeps, dust particles, camera shake.
-- [ ] G.10 Steeplechase (E.3 without the height scan): Map 04 `Track04.unity` (34 MuJoCo box obstacles, Blender visuals from `tools/blender/steeple_props.py`), `train.py --steeple`, `eval.py --rung steeple`. s1 failed (creep, then freeze); s2 adds a progress reward. Done when a policy passes the 90/100 gate and Track04 races finish.
+- [x] G.10 Steeplechase (E.3 without the height scan): Map 04 `Track04.unity` (34 MuJoCo box obstacles, Blender visuals from `tools/blender/steeple_props.py`), `train.py --steeple`, `eval.py --rung steeple`. s1 failed (creep, then freeze); s2 adds a progress reward. Shipped s2 @ 68.8M below the gate (82/100, owner's call): Track04 seeds 1-5, 20/20 racers finish (bank policy 0/20). Graduation (90/100) still open.
 
 ## Phase E: Later (tracked, not scheduled)
 - [x] E.1 Android: `tools/android/build_mujoco_android.sh` -> `Assets/Plugins/Android/arm64-v8a/libmujoco.so` (MuJoCo 3.15.0, API 28, 16 KB pages). Pixel 9 Pro: ModelCheck OK x4, 60 fps, 0.40 ms inference. Min SDK 28.
