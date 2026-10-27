@@ -20,7 +20,7 @@ public class ImpactFx : MonoBehaviour {
   public Material particleMaterial;
   public Material decalMaterial;
   public float rippleImpulse = 3f;
-  public float scuffSlip = 0.35f;
+  public float scuffSlip = 0.6f;
   public float scuffLife = 25f;
   public float cullDistance = 30f;
 
@@ -55,7 +55,7 @@ public class ImpactFx : MonoBehaviour {
     if (!Near(h.pos)) return;
     if (h.kind == ContactKind.Foot) {
       float kf = Mathf.Clamp01(h.impulse / 3f);
-      if (h.impulse > 0.5f && _puffs++ < 8) Emit(_dust, h.pos, h.normal, 1 + (int)(6 * kf), 0.6f + 0.8f * kf, 0.8f + 0.5f * kf);
+      if (h.impulse > 2f && _puffs++ < 3) Emit(_dust, h.pos, h.normal, 1 + (int)(2 * kf), 0.4f + 0.5f * kf, 0.5f + 0.3f * kf);
       if (h.surface == Surface.Track && h.impulse > 2.5f) AddScuff(h.pos, h.normal, 0.12f, 0.08f);
       return;
     }
@@ -80,7 +80,7 @@ public class ImpactFx : MonoBehaviour {
     _lastScuff[key] = Time.time;
     float k = Mathf.Clamp01((slip - scuffSlip) / 1.2f);
     AddScuff(pos, normal, 0.12f + 0.25f * k, 0.05f + 0.04f * k);
-    if (_puffs++ < 8) Emit(_dust, pos, normal, 2 + (int)(5 * k), 0.4f + 0.6f * k, 0.8f);
+    if (slip > 0.9f && _puffs++ < 4) Emit(_dust, pos, normal, 1 + (int)(2 * k), 0.4f + 0.4f * k, 0.6f);
   }
 
   // ---- particles --------------------------------------------------------------------------------------------------
@@ -96,7 +96,7 @@ public class ImpactFx : MonoBehaviour {
   }
 
   void Ring(Vector3 pos, Vector3 normal, float size) {
-    var rot = Quaternion.LookRotation(-normal) * Quaternion.Euler(0f, 0f, Random.Range(0f, 360f));
+    var rot = Quaternion.FromToRotation(Vector3.back, normal) * Quaternion.Euler(0f, 0f, Random.Range(0f, 360f));
     _rings.Emit(new ParticleSystem.EmitParams { position = pos + normal * 0.01f, rotation3D = rot.eulerAngles, startSize = size, applyShapeToPosition = false }, 1);
   }
 
@@ -168,7 +168,7 @@ public class ImpactFx : MonoBehaviour {
     if (_scuffs.Count == 0) return;
     var s = _scuffs[_scuffNext]; _scuffNext = (_scuffNext + 1) % _scuffs.Count;
     var n = normal.sqrMagnitude > 0.01f ? normal.normalized : Vector3.up;
-    s.t.SetPositionAndRotation(pos + n * 0.004f, Quaternion.AngleAxis(Random.Range(0f, 360f), n) * Quaternion.LookRotation(-n));
+    s.t.SetPositionAndRotation(pos + n * 0.004f, Quaternion.AngleAxis(Random.Range(0f, 360f), n) * Quaternion.FromToRotation(Vector3.back, n));
     s.t.localScale = new Vector3(length, width, 1f);
     s.born = Time.time; s.shown = -1f; s.r.enabled = true;
   }

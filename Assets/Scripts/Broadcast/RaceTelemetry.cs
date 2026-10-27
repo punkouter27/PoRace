@@ -24,11 +24,12 @@ public unsafe class RaceTelemetry : MonoBehaviour {
   public MultiRaceOrchestrator race;
   public RaceSensors sensors;
   public StrainMonitor strain;
+  public ContactImpulse contacts;
   public float hz = 10f;
 
   [Serializable] public class Summary {
     public string racer, map, stamp; public int seed, place, falls, overtakes, unsticks, resets, steps, redlines;
-    public float time, distance, meanSpeed, topSpeed, energy, costOfTransport, cadence, peakEffort, mass;
+    public float time, distance, meanSpeed, topSpeed, energy, costOfTransport, cadence, peakEffort, mass, wear;   // wear: N·s of body / cube / robot hits (ContactImpulse)
   }
   [Serializable] class SummaryFile { public List<Summary> racers = new List<Summary>(); }
 
@@ -42,6 +43,7 @@ public unsafe class RaceTelemetry : MonoBehaviour {
     if (race == null) race = FindAnyObjectByType<MultiRaceOrchestrator>();
     if (sensors == null) sensors = FindAnyObjectByType<RaceSensors>();
     if (strain == null) strain = FindAnyObjectByType<StrainMonitor>();
+    if (contacts == null) contacts = FindAnyObjectByType<ContactImpulse>();
     _dir = Path.Combine(Application.persistentDataPath, "telemetry");
     var args = Environment.GetCommandLineArgs();
     for (int i = 0; i + 1 < args.Length; i++) { if (args[i] == "-telemetryDir") _dir = args[i + 1]; if (args[i] == "-azureTableSas") _sas = args[i + 1]; }
@@ -102,7 +104,7 @@ public unsafe class RaceTelemetry : MonoBehaviour {
         resets = r.autoReset != null ? r.autoReset.Resets : 0, steps = strikes, redlines = strain != null ? strain.RedlineCount(r) : 0,
         time = time, distance = r.distance, meanSpeed = time > 0 ? r.distance / time : 0f, topSpeed = a.Item1, energy = e, mass = m,
         costOfTransport = r.distance > 1f ? e / (m * 9.81f * r.distance) : 0f, cadence = time > 0 ? strikes / time : 0f,
-        peakEffort = strain != null ? strain.Peak(r) : 0f };
+        peakEffort = strain != null ? strain.Peak(r) : 0f, wear = contacts != null ? contacts.Wear(r) : 0f };
     }).OrderBy(x => x.place > 0 ? x.place : 99).ToList();
   }
 
@@ -112,8 +114,8 @@ public unsafe class RaceTelemetry : MonoBehaviour {
     LastSummaryPath = _base + "_summary.json";
     File.WriteAllText(LastSummaryPath, JsonUtility.ToJson(new SummaryFile { racers = rows }, true));
     foreach (var x in rows)
-      Debug.Log(string.Format(CultureInfo.InvariantCulture, "[Telemetry] {0} P{1} {2:F2}s mean {3:F2} top {4:F2} m/s CoT {5:F2} cadence {6:F1}/s peak effort {7:F0}% falls {8} passes {9} redlines {10}",
-          x.racer, x.place, x.time, x.meanSpeed, x.topSpeed, x.costOfTransport, x.cadence, x.peakEffort * 100, x.falls, x.overtakes, x.redlines));
+      Debug.Log(string.Format(CultureInfo.InvariantCulture, "[Telemetry] {0} P{1} {2:F2}s mean {3:F2} top {4:F2} m/s CoT {5:F2} cadence {6:F1}/s peak effort {7:F0}% falls {8} passes {9} redlines {10} wear {11:F1} N·s",
+          x.racer, x.place, x.time, x.meanSpeed, x.topSpeed, x.costOfTransport, x.cadence, x.peakEffort * 100, x.falls, x.overtakes, x.redlines, x.wear));
     Debug.Log("[Telemetry] " + LastSummaryPath);
     if (!string.IsNullOrEmpty(_sas)) StartCoroutine(Upload(rows));
     if (_cardText != null) ShowCard(rows);
@@ -139,7 +141,7 @@ public unsafe class RaceTelemetry : MonoBehaviour {
         $"\"PartitionKey\":\"{x.map}\"", $"\"RowKey\":\"{x.stamp}_{x.racer}\"", $"\"Seed\":{x.seed}", $"\"Place\":{x.place}",
         string.Format(ci, "\"Time\":{0:F3}", x.time), string.Format(ci, "\"MeanSpeed\":{0:F3}", x.meanSpeed), string.Format(ci, "\"TopSpeed\":{0:F3}", x.topSpeed),
         string.Format(ci, "\"CostOfTransport\":{0:F3}", x.costOfTransport), string.Format(ci, "\"Cadence\":{0:F2}", x.cadence),
-        string.Format(ci, "\"PeakEffort\":{0:F3}", x.peakEffort), $"\"Falls\":{x.falls}", $"\"Overtakes\":{x.overtakes}", $"\"Racer\":\"{x.racer}\"" }) + "}";
+        string.Format(ci, "\"PeakEffort\":{0:F3}", x.peakEffort), string.Format(ci, "\"Wear\":{0:F2}", x.wear), $"\"Falls\":{x.falls}", $"\"Overtakes\":{x.overtakes}", $"\"Racer\":\"{x.racer}\"" }) + "}";
       using (var req = new UnityWebRequest(_sas, "POST")) {
         req.uploadHandler = new UploadHandlerRaw(Encoding.UTF8.GetBytes(body)); req.downloadHandler = new DownloadHandlerBuffer();
         req.SetRequestHeader("Content-Type", "application/json"); req.SetRequestHeader("Accept", "application/json;odata=nometadata");

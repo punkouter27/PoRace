@@ -4,7 +4,9 @@
     "references": [
         "Mujoco.Runtime",
         "Unity.InferenceEngine",
-        "Unity.InputSystem"
+        "Unity.InputSystem",
+        "Unity.RenderPipelines.Core.Runtime",
+        "Unity.RenderPipelines.Universal.Runtime"
     ],
     "allowUnsafeCode": true,
     "autoReferenced": true

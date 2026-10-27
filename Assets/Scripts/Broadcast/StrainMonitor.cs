@@ -6,10 +6,16 @@ namespace PoRace {
 
 /// <summary>Feature 1, "Redline" joint strain. Each racer's legs glow from their own colour to red with joint effort
 /// (|actuator_force| / 24 N·m from RaceSensors), the standings show one mark per leg (FL FR RL RR), and a racer with
-/// three or more joints above 85 % for half a second is REDLINING (an event for the director and the ticker).</summary>
+/// three or more joints above 85 % for half a second is REDLINING (an event for the director and the ticker).
+/// H.3: hot links also get an HDR rim glow (PoRace/StrainRim, attached only while hot, so cool legs cost nothing), a
+/// REDLINING racer's legs pulse, and every racer grimes over a race with its accumulated hit impulse (ContactImpulse
+/// wear, darkest at wearFull N·s).</summary>
 public class StrainMonitor : MonoBehaviour {
   public MultiRaceOrchestrator race;
   public RaceSensors sensors;
+  public ContactImpulse contacts;
+  public Material rimMaterial;
+  public float wearFull = 250f;
   [Range(0f, 1f)] public float redlineLevel = 0.85f;
   public int redlineJoints = 3;
   public float redlineSeconds = 0.5f;
@@ -17,11 +23,12 @@ public class StrainMonitor : MonoBehaviour {
 
   public event Action<Racer> Redline;
 
-  class Part { public Renderer r; public Color baseColor; public int joint; public float shown = -1f; }
+  class Part { public Renderer r; public Color baseColor; public int joint; public float shown = -1f, glow = -1f, wear = -1f; public Material[] plain, withRim; public bool rimOn; }
   class Track { public readonly List<Part> parts = new List<Part>(); public float redFor, peak; public bool redline; public int count; }
   readonly Dictionary<Racer, Track> _t = new Dictionary<Racer, Track>();
   MaterialPropertyBlock _mpb;
-  static readonly int BaseColor = Shader.PropertyToID("_BaseColor"), Color_ = Shader.PropertyToID("_Color");
+  static readonly int BaseColor = Shader.PropertyToID("_BaseColor"), Color_ = Shader.PropertyToID("_Color"),
+    RimColor = Shader.PropertyToID("_RimColor"), Fill = Shader.PropertyToID("_Fill");
   static readonly Color Hot = new Color(1f, 0.12f, 0.05f);
 
   public bool IsRedlining(Racer r) => _t.TryGetValue(r, out var t) && t.redline;
@@ -31,6 +38,7 @@ public class StrainMonitor : MonoBehaviour {
   void Start() {
     if (race == null) race = FindAnyObjectByType<MultiRaceOrchestrator>();
     if (sensors == null) sensors = FindAnyObjectByType<RaceSensors>();
+    if (contacts == null) contacts = FindAnyObjectByType<ContactImpulse>();
     _mpb = new MaterialPropertyBlock();
     race.standingsExtras.Add(Marks);
     race.Restarted += () => { foreach (var t in _t.Values) { t.peak = 0; t.count = 0; t.redFor = 0; t.redline = false; } };
@@ -46,7 +54,9 @@ public class StrainMonitor : MonoBehaviour {
         if (bodyJoint.TryGetValue(p.name, out int j)) {
           var mat = rend.sharedMaterial;
           var c = mat == null ? Color.gray : mat.HasProperty(BaseColor) ? mat.GetColor(BaseColor) : mat.HasProperty(Color_) ? mat.GetColor(Color_) : Color.gray;
-          t.parts.Add(new Part { r = rend, baseColor = c, joint = j }); break;
+          var plain = rend.sharedMaterials; var withRim = plain;
+          if (rimMaterial != null) { withRim = new Material[plain.Length + 1]; plain.CopyTo(withRim, 0); withRim[plain.Length] = rimMaterial; }
+          t.parts.Add(new Part { r = rend, baseColor = c, joint = j, plain = plain, withRim = withRim }); break;
         }
     }
     return t;
@@ -66,11 +76,18 @@ public class StrainMonitor : MonoBehaviour {
       if (red && !t.redline) { t.count++; Redline?.Invoke(r); BroadcastTicker.Post($"{BroadcastUi.Paint(r.name, r.color)} is {BroadcastUi.Paint("REDLINING", Hot)}  ({hot} joints over {redlineLevel * 100:F0} %)", 3f); }
       t.redline = red;
       if (!tintLegs) continue;
+      float wear = contacts != null ? Mathf.Clamp01(contacts.Wear(r) / wearFull) : 0f;
+      float pulse = red ? 0.5f + 0.5f * Mathf.Sin(Time.unscaledTime * 12f) : 0f;
       foreach (var p in t.parts) {
         float k = Mathf.Clamp01((s.effort[p.joint] - 0.6f) / 0.35f);   // standing holds ~50 %, a hard stride ~70 %
-        if (Mathf.Abs(k - p.shown) < 0.03f) continue;
-        p.shown = k; p.r.GetPropertyBlock(_mpb);
-        var c = Color.Lerp(p.baseColor, Hot, k); _mpb.SetColor(BaseColor, c); _mpb.SetColor(Color_, c); p.r.SetPropertyBlock(_mpb);
+        float glow = Mathf.Max(k * k, 0.8f * pulse);
+        if (Mathf.Abs(k - p.shown) < 0.03f && Mathf.Abs(glow - p.glow) < 0.03f && Mathf.Abs(wear - p.wear) < 0.02f) continue;
+        p.shown = k; p.glow = glow; p.wear = wear; p.r.GetPropertyBlock(_mpb);
+        var grime = Color.Lerp(p.baseColor, p.baseColor * new Color(0.42f, 0.38f, 0.33f, 1f), wear);
+        var c = Color.Lerp(grime, Hot, k); _mpb.SetColor(BaseColor, c); _mpb.SetColor(Color_, c);
+        _mpb.SetColor(RimColor, Hot * (2.2f * glow)); _mpb.SetFloat(Fill, 0.15f * glow); p.r.SetPropertyBlock(_mpb);
+        bool rim = glow > 0.02f && rimMaterial != null;
+        if (rim != p.rimOn) { p.rimOn = rim; p.r.sharedMaterials = rim ? p.withRim : p.plain; }
       }
     }
   }

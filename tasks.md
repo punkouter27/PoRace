@@ -91,6 +91,15 @@ Mark `[x]` when done. Each task is one commit.
 - [x] G.9 `RaceAudio`: synthesised footsteps / servo whine / impacts / crowd / countdown beeps, dust particles, camera shake.
 - [x] G.10 Steeplechase (E.3 without the height scan): Map 04 `Track04.unity` (34 MuJoCo box obstacles, Blender visuals from `tools/blender/steeple_props.py`), `train.py --steeple`, `eval.py --rung steeple`. s1 failed (creep, then freeze); s2 adds a progress reward. Shipped s2 @ 68.8M below the gate (82/100, owner's call): Track04 seeds 1-5, 20/20 racers finish (bank policy 0/20). Graduation (90/100) still open.
 
+## Phase H: Presentation (graphics + audio), `Assets/Scripts/Broadcast/`, report `SCREENSHOTS/h_gfx_audio_report.html`
+- [x] H.1 `ContactImpulse`: impacts from mjData every physics step (J = reduced mass x closing speed via mj_objectVelocity, foot / body / robot-robot / cube, surface from world geom name), foot slip per control step, per-racer wear. `ImpactFx`: impulse-scaled dust, sparks on metal, impact rings, trauma shake in `RaceDirector` (undone before FollowCam smooths). `GfxTier` (`-gfx mobile|pc`). Headless Flat Oval seed 3: finish times identical to before.
+- [x] H.2 `RaceAudio`: tap / thud / slam crossfade by impulse plus surface layers (clang / clank / knock), footsteps per surface plus wet squelch, slip scrape loop, log rolloff, distance low-pass, Doppler on servo whine, arena reverb zones at the stands.
+- [x] H.3 Strain glow: `PoRace/StrainRim` HDR rim plus fill on hot links (attached only while hot), REDLINING pulse, wear grime (full at 250 N·s); wear in the telemetry summary and Azure row.
+- [x] H.4 `BroadcastPost` (post turned on: per-map grade, bloom, INCIDENT and finish looks; Mobile skips vignette / CA) + `BroadcastLighting` (PC subject spotlight with soft shadows; Mobile blob shadows, subject-only real shadow). Mobile shadow distance 50 -> 30 m.
+- [x] H.5 Scuff marks: pooled contact-aligned quads (`PoRace/Decal`, 24 mobile / 64 PC), not URP Decal Projectors (a renderer feature, the G.0 failure mode).
+- [x] H.6 `tools/blender/trackside_props.py`: grandstand + advertising board, LOD0/LOD1, baked colour x AO; `BroadcastBuilder.Trackside` places them on every map (visual only, PhysX components = 0).
+- [x] H.7 `FrameProbe` (`-frameProbe 20`): desktop GPU PC tier 4.1-4.9 ms mean, Mobile tier 3.2-3.4 ms (budget 16.7). Mobile quality level now included on Standalone so `-gfx mobile` uses the phone URP asset. Not yet measured on a phone.
+
 ## Phase E: Later (tracked, not scheduled)
 - [x] E.1 Android: `tools/android/build_mujoco_android.sh` -> `Assets/Plugins/Android/arm64-v8a/libmujoco.so` (MuJoCo 3.15.0, API 28, 16 KB pages). Pixel 9 Pro: ModelCheck OK x4, 60 fps, 0.40 ms inference. Min SDK 28.
 - [ ] E.2 CreatureDefinition / MapDefinition registries and pre-race menu (PRD FR-01..03).

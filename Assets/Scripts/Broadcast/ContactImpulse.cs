@@ -12,7 +12,8 @@ public enum ContactKind { Foot, Body, RobotRobot, Cube }
 /// <summary>H.1, contact impacts for the effects and sound layers, read from mjData every physics step (4 ms):
 ///   impact  a geom pair that starts touching. Impulse is the estimate needed to stop the normal approach:
 ///           J = m_eff * v_n, v_n from mj_objectVelocity at the contact point, m_eff the reduced mass of the two sides
-///           (foot 1.5 kg, any other robot geom half the robot, cube its body mass, world infinite). Summing
+///           (foot 1.5 kg, any other robot geom the mass of its body and everything below it, at most half the robot,
+///           so a grazing calf is light and a landing trunk is heavy; cube its body mass, world infinite). Summing
 ///           mj_contactForce over a window was rejected: standing load dominates it, so a still foot reads as a hit.
 ///   slip    per control step, tangential speed of each foot touching a world geom (scrape and wet-track sounds,
 ///           scuff marks).
@@ -40,20 +41,28 @@ public unsafe class ContactImpulse : MonoBehaviour {
   Racer[] _geomRacer; int[] _geomFoot; Surface[] _surface; float[] _mass; bool[] _cube;
   Dictionary<long, int> _seen = new Dictionary<long, int>(), _next = new Dictionary<long, int>();
   readonly Dictionary<Racer, float> _wear = new Dictionary<Racer, float>();
+  readonly Dictionary<Racer, int> _slot = new Dictionary<Racer, int>();
   readonly float[] _slip = new float[4 * 4]; readonly Vector3[] _slipPos = new Vector3[4 * 4], _slipN = new Vector3[4 * 4]; readonly Surface[] _slipSurf = new Surface[4 * 4];
   int _step;
+  readonly int[] _count = new int[4]; readonly float[] _sum = new float[4], _max = new float[4];
 
   void Awake() {
     if (race == null) race = FindAnyObjectByType<MultiRaceOrchestrator>();
     MjScene.Instance.postUpdateEvent += OnPostStep;
   }
   void Start() { race.Restarted += () => _wear.Clear(); }
-  void OnDestroy() { if (MjScene.InstanceExists) MjScene.Instance.postUpdateEvent -= OnPostStep; }
+  void OnDestroy() {
+    if (MjScene.InstanceExists) MjScene.Instance.postUpdateEvent -= OnPostStep;
+    var sb = new System.Text.StringBuilder("[Contacts] impacts");
+    for (int k = 0; k < 4; k++) sb.AppendFormat(System.Globalization.CultureInfo.InvariantCulture, "  {0} {1} (mean {2:F2}, max {3:F2} N·s)", (ContactKind)k, _count[k], _count[k] > 0 ? _sum[k] / _count[k] : 0f, _max[k]);
+    Debug.Log(sb.ToString());
+  }
 
   void Init(MujocoLib.mjModel_* m) {
     int n = (int)m->ngeom;
     _geomRacer = new Racer[n]; _geomFoot = new int[n]; _surface = new Surface[n]; _mass = new float[n]; _cube = new bool[n];
     var root = new Dictionary<int, Racer>(); var robotMass = new Dictionary<Racer, float>();
+    for (int i = 0; i < race.Live.Count; i++) _slot[race.Live[i]] = i;
     foreach (var r in race.Live) {
       var M = r.controller.Model; if (M == null) { _geomRacer = null; return; }
       root[M.BaseBody] = r; float mass = 0f;
@@ -67,7 +76,7 @@ public unsafe class ContactImpulse : MonoBehaviour {
         _surface[g] = name.Contains("rail") ? Surface.Metal : name.Contains("obs") ? Surface.Wood : Surface.Track;
         _mass[g] = float.PositiveInfinity; continue;
       }
-      if (root.TryGetValue(m->body_rootid[b], out var r)) { _geomRacer[g] = r; _surface[g] = Surface.Robot; _mass[g] = 0.5f * robotMass[r]; }
+      if (root.TryGetValue(m->body_rootid[b], out var r)) { _geomRacer[g] = r; _surface[g] = Surface.Robot; _mass[g] = Mathf.Min((float)m->body_subtreemass[b], 0.5f * robotMass[r]); }
       else { _cube[g] = true; _surface[g] = Surface.Cube; _mass[g] = (float)m->body_mass[b]; }
     }
     foreach (var r in race.Live) {
@@ -111,7 +120,7 @@ public unsafe class ContactImpulse : MonoBehaviour {
       int fg = _geomFoot[g1] >= 0 && m->geom_bodyid[g2] == 0 ? g1 : _geomFoot[g2] >= 0 && m->geom_bodyid[g1] == 0 ? g2 : -1;
       if (control && fg >= 0) {
         var v = PointVel(m, d, fg, p); var t = v - Vector3.Dot(v, nrm) * nrm;
-        int slot = race.Live.IndexOf(_geomRacer[fg]) * 4 + _geomFoot[fg];
+        int slot = _slot[_geomRacer[fg]] * 4 + _geomFoot[fg];
         if (slot >= 0 && slot < _slip.Length && t.magnitude > _slip[slot]) {
           _slip[slot] = t.magnitude; _slipPos[slot] = new Vector3(p.x, p.z, p.y);
           var up = fg == g1 ? -nrm : nrm; _slipN[slot] = new Vector3(up.x, up.z, up.y);   // out of the ground
@@ -140,6 +149,7 @@ public unsafe class ContactImpulse : MonoBehaviour {
         if (r1 != null) _wear[r1] = Wear(r1) + J;
         if (r2 != null) _wear[r2] = Wear(r2) + J;
       }
+      _count[(int)kind]++; _sum[(int)kind] += J; _max[(int)kind] = Mathf.Max(_max[(int)kind], J);
       Impact?.Invoke(hit);
     }
     (_seen, _next) = (_next, _seen);

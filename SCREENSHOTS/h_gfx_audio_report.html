@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Phase H Presentation</title>
+<style>
+  :root { --bg:#f6f6f4; --fg:#1d1d1f; --muted:#5f6368; --card:#fff; --line:#e2e2de; --new:#d93a2b; --old:#2b6fd9; --ok:#1f8a4c; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg:#141416; --fg:#ececec; --muted:#a0a3a8; --card:#1d1d20; --line:#2c2c30; } }
+  :root[data-theme="dark"] { --bg:#141416; --fg:#ececec; --muted:#a0a3a8; --card:#1d1d20; --line:#2c2c30; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg); font:15px/1.5 system-ui, -apple-system, Segoe UI, sans-serif; }
+  main { max-width:1100px; margin:0 auto; padding:24px 16px 64px; }
+  h1 { font-size:26px; margin:0 0 4px; } h2 { font-size:19px; margin:36px 0 8px; } p.lede { color:var(--muted); margin:0 0 20px; }
+  table { width:100%; border-collapse:collapse; background:var(--card); border:1px solid var(--line); font-size:14px; }
+  th, td { text-align:left; padding:8px 10px; border-bottom:1px solid var(--line); vertical-align:top; }
+  th { font-weight:600; } td.num { font-variant-numeric:tabular-nums; white-space:nowrap; }
+  .pair { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:12px; }
+  @media (max-width:700px) { .pair { grid-template-columns:1fr; } }
+  figure { margin:0; background:var(--card); border:1px solid var(--line); border-radius:8px; padding:10px; }
+  figcaption { font-size:13px; color:var(--muted); margin-top:8px; }
+  .shot { position:relative; aspect-ratio:540/960; max-width:360px; margin:0 auto; }
+  .shot img { width:100%; height:100%; display:block; border-radius:4px; }
+  .box { position:absolute; border:2px solid var(--new); border-radius:4px; }
+  .box.old { border-color:var(--old); border-style:dashed; }
+  .box span { position:absolute; left:-2px; top:-22px; background:var(--new); color:#fff; font-size:11px; font-weight:600; padding:1px 6px; border-radius:3px; white-space:nowrap; }
+  .box.old span { background:var(--old); }
+  .box.below span { top:auto; bottom:-22px; }
+  .tag { display:inline-block; font-size:12px; font-weight:600; padding:1px 7px; border-radius:10px; background:var(--line); }
+  ul { padding-left:20px; } code { font-size:13px; }
+</style>
+</head>
+<body>
+<main>
+<h1>Phase H: graphics and audio pass</h1>
+<p class="lede">Before = build of the pre-Phase-H code (adb43ba broadcast scripts, current scenes). After = current working tree. Same seed (3), same chat-script hazards (cube drops, throws, shove), same fixed weather, 540×960 portrait, desktop player. Red solid boxes are new; blue dashed boxes mark what they replace.</p>
+
+<h2>What changed</h2>
+<table>
+<tr><th>Item</th><th>What</th><th>Where</th></tr>
+<tr><td>H.1</td><td>Contact impulses from mjData every 4 ms (J = reduced mass × closing speed); dust bursts and sparks scaled to impulse, impact rings, trauma camera shake (offset removed before FollowCam smooths, so shake no longer drifts the camera); <code>GfxTier</code> budget switch, <code>-gfx mobile|pc</code></td><td>ContactImpulse, ImpactFx, GfxTier, RaceDirector</td></tr>
+<tr><td>H.2</td><td>Impact sound crossfades tap / thud / slam by impulse, plus a surface layer (rail clang, robot clank, obstacle knock); footsteps per surface plus a wet squelch; scrape loop per racer driven by foot slip; logarithmic rolloff, distance low-pass, Doppler on servo whine; arena reverb zones at the stands</td><td>RaceAudio, BroadcastBuilder</td></tr>
+<tr><td>H.3</td><td>Strain: HDR rim glow plus fill on hot leg links (custom shader, attached only while hot), REDLINING pulse, grime from accumulated hit impulse; wear goes to the telemetry summary and Azure row</td><td>StrainMonitor, StrainRim.shader, RaceTelemetry</td></tr>
+<tr><td>H.4</td><td>Post-processing turned on (it was off): per-map grade, neutral tonemap, bloom; INCIDENT slow-motion look and a finish bloom kick. PC: soft-shadowed spotlight on the director's subject. Mobile: only the subject casts a shadow, blob shadows for the rest, shadow distance 50 → 30 m</td><td>BroadcastPost, BroadcastLighting</td></tr>
+<tr><td>H.5</td><td>Scuff marks where feet slide and bodies or cubes land, laid on the contact plane, pooled (24 mobile / 64 PC), fading out</td><td>ImpactFx, PoRaceDecal.shader</td></tr>
+<tr><td>H.6</td><td>Blender grandstand and advertising board, LOD0 / LOD1, baked colour × AO texture, placed along every track (visual only, no colliders)</td><td>tools/blender/trackside_props.py, Assets/Art</td></tr>
+<tr><td>H.7</td><td><code>FrameProbe</code> (<code>-frameProbe 20</code>): whole-frame cost with vsync off; the Mobile quality level is now included on Standalone so <code>-gfx mobile</code> also uses the phone's URP asset</td><td>FrameProbe, QualitySettings</td></tr>
+</table>
+
+<h2>1 · Steeplechase, 25 s, LEADER camera</h2>
+<div class="pair">
+<figure><div class="shot"><img src="h_before/steeple_03_25s.png" alt="Before: steeplechase leader shot">
+  <div class="box old below" style="left:0;top:62%;width:100%;height:18%"><span>fixed dust specks on every stride</span></div>
+</div><figcaption>Before: empty surroundings, no post-processing, the same 3-particle puff on every step above 0.6 m/s.</figcaption></figure>
+<figure><div class="shot"><img src="h_after/steeple_03_25s.png" alt="After: steeplechase leader shot">
+  <div class="box" style="left:52%;top:30%;width:24%;height:10%"><span>H.6 grandstand (LOD0)</span></div>
+  <div class="box" style="left:14%;top:32%;width:13%;height:8%"><span>LOD1</span></div>
+  <div class="box" style="left:73%;top:37%;width:13%;height:7%"><span>H.6 boards</span></div>
+  <div class="box" style="left:1%;top:37%;width:13%;height:7%"></div>
+  <div class="box below" style="left:0;top:0;width:100%;height:17%"><span>HUD unchanged (overlay, no post on text)</span></div>
+</div><figcaption>After: stands and boards dress the course, golden-hour grade for Map 04, and foot dust only on hard landings (impulse &gt; 2 N·s).</figcaption></figure>
+</div>
+
+<h2>2 · Banked Oval in rain (3 mm/h), 30 s</h2>
+<div class="pair">
+<figure><div class="shot"><img src="h_before/banked_rain_04_30s.png" alt="Before: banked oval in rain"></div>
+<figcaption>Before (TRACKSIDE camera): rain curtain and dimmed sun from G.6.</figcaption></figure>
+<figure><div class="shot"><img src="h_after_rain/banked_04_30s.png" alt="After: banked oval in rain">
+  <div class="box" style="left:0;top:15%;width:30%;height:15%"><span>stand + reverb zone</span></div>
+  <div class="box below" style="left:12%;top:52%;width:62%;height:20%"><span>wet-track puffs; squelch layer on the same steps</span></div>
+</div><figcaption>After (BATTLE camera; the director cut differently in this run): Map 03's overcast grade with rain pulling saturation down; wet footsteps add a squelch layer and the slip scrape gets darker and louder (not visible in a still).</figcaption></figure>
+</div>
+
+<h2>3 · Mobile tier on desktop (<code>-gfx mobile</code>), Flat Oval, 30 s</h2>
+<div class="pair">
+<figure><div class="shot"><img src="h_after/oval_04_30s.png" alt="After, PC tier, flat oval"></div>
+<figcaption>PC tier: every robot casts a real-time shadow, plus the subject spotlight, vignette and full-quality bloom.</figcaption></figure>
+<figure><div class="shot"><img src="h_after_mobile/oval_04_30s.png" alt="After, Mobile tier, flat oval">
+  <div class="box" style="left:8%;top:48%;width:64%;height:14%"><span>blob shadows, subject keeps the real one</span></div>
+  <div class="box" style="left:0;top:18%;width:22%;height:30%"><span>stand LOD + AO bake</span></div>
+</div><figcaption>Mobile tier: phone URP asset (render scale 0.8, one cascade, 30 m shadows), quarter-res bloom, no vignette or chromatic aberration, 24 scuffs, one burst per frame.</figcaption></figure>
+</div>
+
+<h2>4 · Close camera, steeplechase 40 s and 50 s</h2>
+<div class="pair">
+<figure><div class="shot"><img src="h_after/steeple_05_40s.png" alt="After: close battle shot with grandstand behind">
+  <div class="box" style="left:0;top:0;width:53%;height:36%"><span>baked AO: tiers read as solid</span></div>
+</div><figcaption>BATTLE camera close to the rail: the grandstand's baked AO carries depth without SSAO, which stays off (G.0).</figcaption></figure>
+<figure><div class="shot"><img src="h_after/steeple_06_50s.png" alt="After: close battle shot with board behind">
+  <div class="box below" style="left:5%;top:55%;width:90%;height:30%"><span>foot puffs: still noticeable this close</span></div>
+</div><figcaption>Known look issue: at BATTLE range the hard-landing puffs still read as soft blobs. They were cut twice (see notes) and could go further.</figcaption></figure>
+</div>
+
+<h2>Measurements</h2>
+<table>
+<tr><th>Check</th><th>Result</th></tr>
+<tr><td>Frame time, desktop GPU, vsync off (FrameProbe 20 s after 15 s warm-up)</td><td class="num">PC tier: oval 4.85 ms mean / 7.18 p95 · steeple 4.11 / 6.06<br>Mobile tier: oval 3.38 / 5.11 · steeple 3.21 / 4.92<br>Budget 16.7 ms. No baseline number (the before build has no FrameProbe). Not measured on a phone: no Android device was connected.</td></tr>
+<tr><td>Sim untouched (headless <code>-raceTest -seed 3</code>, Flat Oval, no hazards)</td><td>Same finish times before and after (Gold 153.39 s, Blue 155.68, Green 155.91, Red 156.37). Runs with chat hazards differ even baseline against baseline, so they are not a determinism check.</td></tr>
+<tr><td>Impact detection (headless, one race)</td><td class="num">Oval: 19,179 foot (mean 1.27 N·s), 372 robot–robot (0.78), 0 body<br>Steeple: 17,584 foot (1.13), 423 body (1.55, max 16.2), 8 robot–robot</td></tr>
+<tr><td>No PhysX</td><td>0 Rigidbody / Collider components in all four race scenes after the rebuild</td></tr>
+<tr><td>Player logs</td><td>No exceptions in any after run (PC, mobile, rain)</td></tr>
+</table>
+
+<h2>Notes and deviations from the proposal</h2>
+<ul>
+<li><b>Scuffs and rings use pooled quads and particles with a custom decal shader, not URP Decal Projectors.</b> Projectors need a renderer feature, and a renderer feature whose resources went missing in builds is what blanked the desktop players in G.0.</li>
+<li><b>Strain glow is a custom additive shader, not URP Lit emission.</b> A keyword enabled only at runtime is stripped from player builds. The glow only shows on hot legs (above about 60 % effort), so none of these stills caught it.</li>
+<li><b>Mobile cascades were already 1</b> (the proposal said 4 → 2). Only the shadow distance changed, 50 → 30 m.</li>
+<li><b>Two fixes found during capture:</b> foot dust started as a brown band and was cut twice; the grandstands first faced away from the track and blocked TRACKSIDE shots (FBX export maps Blender +Y to Unity −Z), and are now turned round and 2.5 m past the bank edge.</li>
+<li><b>Audio</b> can't be judged from screenshots. Sounds were synthesised and wired, but nobody has listened to them yet.</li>
+</ul>
+</main>
+</body>
+</html>

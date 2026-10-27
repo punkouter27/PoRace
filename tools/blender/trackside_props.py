@@ -10,7 +10,7 @@ Each prop has LOD0 (bevelled) and LOD1 (~35 % of the triangles) and one baked te
 ambient occlusion, so the stands read as solid on phones without real-time AO (SSAO is off, see G.0).
 Outputs: Assets/Art/Raw/trackside_props.blend (source) and Assets/Art/Exports/GLB/<prop>_lod{0,1}.fbx plus
 <prop>_albedo.png (Unity), Blender axes -Z forward / Y up as Unity expects. The prop's origin is the ground point
-under its front edge centre; +Y (Unity +Z after export) points away from the track.
+under its front edge centre; +Y (Unity -Z after export) points away from the track.
 """
 import math
 import os
