@@ -42,7 +42,7 @@ public class Racer {
 /// of the validated locomotion + getup policies. Racers bump through solver contact only. Steering is the joystick
 /// command: vx = cruise, yaw rate toward a look-ahead point on the racer's lane of the map centerline.
 /// Lane draw and speed variation are random per race (seeded). MuJoCo frame: x, y on the ground, z up.
-/// Headless: PoRace.exe -batchmode -nographics -raceTest [-timeScale 4] [-seed 7] [-racers 4] [-laps 2] [-raceFlipAt 20] [-noTactics]
+/// Headless: PoRace.exe -batchmode -nographics -raceTest [-timeScale 4] [-seed 7] [-racers 4 | -dogMask 5] [-matt] [-laps 2] [-raceFlipAt 20] [-noTactics]
 /// </summary>
 public unsafe class MultiRaceOrchestrator : MonoBehaviour {
   public MapDefinition map;
@@ -87,7 +87,7 @@ public unsafe class MultiRaceOrchestrator : MonoBehaviour {
 
   void Awake() {
     int dogs = racers.Count(r => r.matt == null);
-    int n = Mathf.Clamp(RaceConfig.fromMenu ? RaceConfig.racers : dogs, 1, dogs);
+    int all = (1 << dogs) - 1, mask = RaceConfig.fromMenu ? RaceConfig.dogMask & all : all;
     bool matt = RaceConfig.fromMenu && RaceConfig.matt;
     int laps = RaceConfig.fromMenu ? RaceConfig.laps : 0; int seed = RaceConfig.fromMenu ? RaceConfig.seed : -1;
     // Time.timeScale outlives scene loads: a load during an instant replay (0) or an INCIDENT slow motion (0.4) - the
@@ -102,7 +102,8 @@ public unsafe class MultiRaceOrchestrator : MonoBehaviour {
       if (args[i] == "-timeScale") Time.timeScale = float.Parse(args[i + 1], CultureInfo.InvariantCulture);
       if (args[i] == "-raceFlipAt") _flipAt = double.Parse(args[i + 1], CultureInfo.InvariantCulture);
       if (args[i] == "-seed") seed = int.Parse(args[i + 1]);
-      if (args[i] == "-racers") n = Mathf.Clamp(int.Parse(args[i + 1]), 1, dogs);
+      if (args[i] == "-racers") mask = (1 << Mathf.Clamp(int.Parse(args[i + 1]), 1, dogs)) - 1;
+      if (args[i] == "-dogMask") mask = int.Parse(args[i + 1]) & all;   // bit k = k-th dog of the roster (1 = Blue, 2 = Red, ...)
       if (args[i] == "-laps") laps = int.Parse(args[i + 1]);
     }
     Laps = map.closed ? Mathf.Clamp(laps > 0 ? laps : map.defaultLaps, 1, 5) : 1;
@@ -114,17 +115,30 @@ public unsafe class MultiRaceOrchestrator : MonoBehaviour {
     // rl_optimization_log.md); with him on the grid the shared model compiles at 1, the dogs' gates at 1: R0 / R2 10/10,
     // R1 9/10. Dogs-only races keep 100.
     if (matt) { var gs = MjGlobalSettings.Instance; var o = gs.GlobalOptions; o.ImpRatio = MattSpec.ImpRatio; gs.GlobalOptions = o; }
+    if (mask == 0 && !matt) mask = 1;   // never an empty grid (e.g. Matt alone picked, then a banked map)
 
-    // Racers not on the grid are removed from the MuJoCo model before MjScene compiles it (in Start): the first n dogs
-    // race, Matt joins when picked on the roster (-matt).
+    // Racers not on the grid are removed from the MuJoCo model before MjScene compiles it (in Start): the dogs picked on
+    // the menu roster (RaceConfig.dogMask) race, Matt joins when picked (-matt).
     for (int i = 0, k = 0; i < racers.Count; i++) {
-      racers[i].active = racers[i].matt != null ? matt : k++ < n;
-      if (!racers[i].active) { if (racers[i].mjRoot != null) racers[i].mjRoot.SetActive(false); racers[i].Body.gameObject.SetActive(false); }
+      racers[i].active = racers[i].matt != null ? matt : (mask >> k++ & 1) != 0;
+      if (racers[i].active) continue;
+      if (racers[i].mjRoot == null) { Park(racers[i]); continue; }
+      racers[i].mjRoot.SetActive(false); racers[i].Body.gameObject.SetActive(false);
     }
     _live = racers.Where(r => r.active).ToList();
     Draw();
     MjScene.Instance.preUpdateEvent += (s, a) => _sw.Restart();
     MjScene.Instance.postUpdateEvent += OnPostStep;
+  }
+
+  /// <summary>The first dog's bodies are the base of the shared MuJoCo model (no mjRoot to remove) and its GameObject
+  /// carries the HUD telemetry and the cube pool, so off the grid it stays in the model: hidden, holding its home pose
+  /// on the floor plane 40 m outside the track.</summary>
+  void Park(Racer r) {
+    var lo = map.PointAt(0f, out _);
+    for (float s = 0f; s < map.Length; s += 2f) lo = Vector2.Min(lo, map.PointAt(s, out _));
+    r.Body.SpawnMj = new Vector3(lo.x - 40f, lo.y - 40f, r.Body.HomeHeight);
+    foreach (var rend in r.Body.BaseTransform.GetComponentsInChildren<Renderer>()) rend.enabled = false;
   }
 
   /// <summary>Random lane draw and speed variation for this race, reproducible from Seed.</summary>

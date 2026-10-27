@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Menu Roster Picker</title>
+<style>
+  :root { --bg: #f6f7f9; --fg: #1b1e24; --muted: #5d6470; --card: #fff; --line: #dfe2e7; --mark: #e8590c; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #14161b; --fg: #e8eaee; --muted: #9aa1ad; --card: #1d2027; --line: #2c3039; --mark: #ff8a3d; } }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.5 system-ui, sans-serif; }
+  main { max-width: 1040px; margin: 0 auto; padding: 24px 16px 48px; }
+  h1 { font-size: 24px; margin: 0 0 4px; } p.sub { color: var(--muted); margin: 0 0 24px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
+  figure { margin: 0; background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 12px; }
+  figcaption { font-weight: 600; margin-bottom: 8px; } figcaption span { display: block; font-weight: 400; color: var(--muted); font-size: 13px; }
+  .shot { position: relative; } .shot img { width: 100%; display: block; border-radius: 6px; }
+  .box { position: absolute; left: 3%; right: 3%; top: 35.5%; height: 11.5%; border: 3px solid var(--mark); border-radius: 6px; }
+  ul { padding-left: 20px; } code { font-size: 13px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Main menu: pick who races</h1>
+  <p class="sub">2026-10-27 · Menu.unity (MenuBuilder) · 540×960 captures from the Windows player via ShotProbe</p>
+  <div class="grid">
+    <figure><figcaption>Before<span>DOGS count (always the first N dogs) and a separate “+ Matt” button.</span></figcaption>
+      <div class="shot"><img src="roster_before/menu_00_3s.png" alt="Menu before: DOGS stepper and + Matt button"><div class="box"></div></div></figure>
+    <figure><figcaption>After: default<span>One chip per racer. All four dogs in, Matt out.</span></figcaption>
+      <div class="shot"><img src="roster_after/menu_default_00_3s.png" alt="Menu after: five roster chips, four dogs in"><div class="box"></div></div></figure>
+    <figure><figcaption>After: a custom grid<span>Red, Gold and Matt in; Blue and Green out. Count reads “RACERS 3”.</span></figcaption>
+      <div class="shot"><img src="roster_after/menu_picked_00_3s.png" alt="Menu after: Red, Gold, Matt in"><div class="box"></div></div></figure>
+  </div>
+  <h2>Behaviour</h2>
+  <ul>
+    <li>Tap a chip to put that racer on the grid or take them off. The last racer can't be removed.</li>
+    <li>On banked and steeplechase maps, Matt's chip reads “flat only” and can't be picked. If Matt was the only pick, Blue starts.</li>
+    <li>Picks are saved (<code>PoRace.dogMask</code>, <code>PoRace.matt</code>). Autoplay still races everyone.</li>
+    <li>Blue's bodies are the base of the shared MuJoCo model, so when Blue is out it stays in the model, hidden and parked 40 m off the track. Other dogs are removed from the model as before.</li>
+    <li>Headless check: <code>-raceTest -dogMask 10 -matt</code> on Planar Sprint passed all model checks. Gold 68.76 s, Red 71.56 s; Matt DNF (known m6 policy issue).</li>
+  </ul>
+</main>
+</body>
+</html>

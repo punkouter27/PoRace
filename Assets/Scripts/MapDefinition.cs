@@ -145,7 +145,14 @@ public static class MapRegistry {
 
 /// <summary>Choices made on the pre-race screen, carried across the scene load. Defaults give a full grid.</summary>
 public static class RaceConfig {
-  public static int racers = 4;
+  /// <summary>The dogs of every race scene's roster, in Racer-list order (MultiRaceOrchestrator.racers): names and
+  /// liveries for the menu's roster chips. Bit k of dogMask is Dogs[k].</summary>
+  public static readonly (string name, Color color)[] Dogs = {
+    ("Blue", new Color(0.25f, 0.5f, 1f)), ("Red", new Color(1f, 0.3f, 0.25f)),
+    ("Green", new Color(0.3f, 0.85f, 0.4f)), ("Gold", new Color(1f, 0.8f, 0.2f)),
+  };
+  public static readonly Color MattColor = new Color(1f, 0.62f, 0.18f);
+  public static int dogMask = 0b1111;       // which dogs race (bit k = Dogs[k])
   public static bool matt = false;          // Matt (the human racer) on the grid; flat maps only
   // Self-running app: launch straight into a race, then race after race (MultiRaceOrchestrator). Off after the player
   // presses Menu, or when started with -menu.
@@ -158,7 +165,7 @@ public static class RaceConfig {
     var flat = System.Array.FindAll(MapRegistry.All(), m => m.terrain == "flat");
     if (flat.Length == 0) return;
     autoplayMap = (autoplayMap + 1) % flat.Length;
-    racers = 4; laps = 0; seed = -1; fromMenu = true; matt = true;
+    dogMask = 0b1111; laps = 0; seed = -1; fromMenu = true; matt = true;
     QualitySettings.vSyncCount = 0; Application.targetFrameRate = 30;
     UnityEngine.SceneManagement.SceneManager.LoadScene(flat[autoplayMap].sceneName);
   }

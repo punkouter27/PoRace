@@ -102,7 +102,7 @@ Mark `[x]` when done. Each task is one commit.
 
 ## Phase E: Later (tracked, not scheduled)
 - [x] E.1 Android: `tools/android/build_mujoco_android.sh` -> `Assets/Plugins/Android/arm64-v8a/libmujoco.so` (MuJoCo 3.15.0, API 28, 16 KB pages). Pixel 9 Pro: ModelCheck OK x4, 60 fps, 0.40 ms inference. Min SDK 28.
-- [ ] E.2 CreatureDefinition / MapDefinition registries and pre-race menu (PRD FR-01..03). Registry in place: `CreatureDefinition` / `CreatureRegistry` (Resources/Creatures, `CreatureBuilder` / `-executeMethod CreatureBuilder.BuildCli`), Go2 raceable, Matt roster stub. Menu does not list creatures yet.
+- [ ] E.2 CreatureDefinition / MapDefinition registries and pre-race menu (PRD FR-01..03). Registry in place: `CreatureDefinition` / `CreatureRegistry` (Resources/Creatures, `CreatureBuilder` / `-executeMethod CreatureBuilder.BuildCli`), Go2 raceable, Matt roster stub. Menu roster chips pick which racers start (four dogs + Matt; `-dogMask` headless; report `SCREENSHOTS/roster_report.html`).
 - [x] E.2a Matt (photoscan, 1.89 m): `tools/blender/matt_rig.py` removes the scan's floor mat, rigs a 22-bone Mecanim-named armature, bone-heat skin -> `matt.fbx` + 2K URP maps; Unity Humanoid avatar valid (22 bones mapped), visual-only prefab (PhysX components 0). `CreatureBuilder.PreviewCli -shotDir <dir>` renders rest + muscle-driven pose. Not raceable: needs a biped MuJoCo body + graduated policy (E.4).
 - [ ] E.3 Rough terrain rung (heightfield scan obs) and multi-agent racing rung.
 - [ ] E.4 G1 / H1 / DeepMimic biped onboarding through the same gates.
