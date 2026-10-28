@@ -24,7 +24,7 @@
               <geom name="left_shin" type="capsule" fromto="0 0 0 -0.072506 0.016918 -0.39879" size="0.0519" mass="4.0920" />
               <body name="left_ankle_pitch_link" pos="-0.072506 0.016918 -0.39879">
                 <inertial pos="0 0 0" mass="0.1" diaginertia="1e-4 1e-4 1e-4" />
-                <joint name="left_ankle_pitch_joint" axis="0 1 0" range="-0.35 0.8" damping="4.0" armature="0.02" />
+                <joint name="left_ankle_pitch_joint" axis="0 1 0" range="-0.6 0.8" damping="4.0" armature="0.02" />
                 <body name="left_ankle_roll_link">
                   <joint name="left_ankle_roll_joint" axis="1 0 0" range="-0.35 0.35" damping="4.0" armature="0.02" />
                   <geom name="left_foot" type="box" size="0.1566 0.0520 0.03" pos="0.088121 0.035697 -0.082571" quat="0.99631 0 0 0.08584" mass="1.2760" />
@@ -49,7 +49,7 @@
               <geom name="right_shin" type="capsule" fromto="0 0 0 -0.072506 -0.016918 -0.39879" size="0.0552" mass="4.0920" />
               <body name="right_ankle_pitch_link" pos="-0.072506 -0.016918 -0.39879">
                 <inertial pos="0 0 0" mass="0.1" diaginertia="1e-4 1e-4 1e-4" />
-                <joint name="right_ankle_pitch_joint" axis="0 1 0" range="-0.35 0.8" damping="4.0" armature="0.02" />
+                <joint name="right_ankle_pitch_joint" axis="0 1 0" range="-0.6 0.8" damping="4.0" armature="0.02" />
                 <body name="right_ankle_roll_link">
                   <joint name="right_ankle_roll_joint" axis="1 0 0" range="-0.35 0.35" damping="4.0" armature="0.02" />
                   <geom name="right_foot" type="box" size="0.1581 0.0520 0.03" pos="0.07487 -0.025489 -0.086714" quat="0.99847 0 0 -0.05522" mass="1.2760" />
@@ -152,13 +152,13 @@
     <general name="left_hip_roll_joint" joint="left_hip_roll_joint" ctrlrange="-0.2 0.8" forcerange="-200 200" forcelimited="true" biastype="affine" gainprm="300" biasprm="0 -300" />
     <general name="left_hip_yaw_joint" joint="left_hip_yaw_joint" ctrlrange="-0.6 0.6" forcerange="-100 100" forcelimited="true" biastype="affine" gainprm="300" biasprm="0 -300" />
     <general name="left_knee_joint" joint="left_knee_joint" ctrlrange="0.0 2.4" forcerange="-250 250" forcelimited="true" biastype="affine" gainprm="300" biasprm="0 -300" />
-    <general name="left_ankle_pitch_joint" joint="left_ankle_pitch_joint" ctrlrange="-0.35 0.8" forcerange="-180 180" forcelimited="true" biastype="affine" gainprm="80" biasprm="0 -80" />
+    <general name="left_ankle_pitch_joint" joint="left_ankle_pitch_joint" ctrlrange="-0.6 0.8" forcerange="-180 180" forcelimited="true" biastype="affine" gainprm="80" biasprm="0 -80" />
     <general name="left_ankle_roll_joint" joint="left_ankle_roll_joint" ctrlrange="-0.35 0.35" forcerange="-60 60" forcelimited="true" biastype="affine" gainprm="80" biasprm="0 -80" />
     <general name="right_hip_pitch_joint" joint="right_hip_pitch_joint" ctrlrange="-1.8 0.5" forcerange="-250 250" forcelimited="true" biastype="affine" gainprm="300" biasprm="0 -300" />
     <general name="right_hip_roll_joint" joint="right_hip_roll_joint" ctrlrange="-0.8 0.2" forcerange="-200 200" forcelimited="true" biastype="affine" gainprm="300" biasprm="0 -300" />
     <general name="right_hip_yaw_joint" joint="right_hip_yaw_joint" ctrlrange="-0.6 0.6" forcerange="-100 100" forcelimited="true" biastype="affine" gainprm="300" biasprm="0 -300" />
     <general name="right_knee_joint" joint="right_knee_joint" ctrlrange="0.0 2.4" forcerange="-250 250" forcelimited="true" biastype="affine" gainprm="300" biasprm="0 -300" />
-    <general name="right_ankle_pitch_joint" joint="right_ankle_pitch_joint" ctrlrange="-0.35 0.8" forcerange="-180 180" forcelimited="true" biastype="affine" gainprm="80" biasprm="0 -80" />
+    <general name="right_ankle_pitch_joint" joint="right_ankle_pitch_joint" ctrlrange="-0.6 0.8" forcerange="-180 180" forcelimited="true" biastype="affine" gainprm="80" biasprm="0 -80" />
     <general name="right_ankle_roll_joint" joint="right_ankle_roll_joint" ctrlrange="-0.35 0.35" forcerange="-60 60" forcelimited="true" biastype="affine" gainprm="80" biasprm="0 -80" />
     <general name="waist_yaw_joint" joint="waist_yaw_joint" ctrlrange="-0.5 0.5" forcerange="-100 100" forcelimited="true" biastype="affine" gainprm="300" biasprm="0 -300" />
     <general name="waist_roll_joint" joint="waist_roll_joint" ctrlrange="-0.3 0.3" forcerange="-150 150" forcelimited="true" biastype="affine" gainprm="300" biasprm="0 -300" />

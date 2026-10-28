@@ -128,6 +128,8 @@ public unsafe class MattController : MonoBehaviour, IParitySource, IRacer {
       Must(_actComp[i] != null, $"MjActuator component for {MattSpec.Joints[i]}");
     }
     Debug.Log($"[MattCheck] OK mass={mass:F4} dt={m->opt.timestep} baseQpos={BaseQpos}");
+    // -dumpModel <file.mjb>: the compiled model Unity simulates, for training/matt/compare_model.py
+    if (CliArgs.TryString("-dumpModel", out var mjb)) { MujocoLib.mj_saveModel(m, mjb, null, 0); Debug.Log($"[MattCheck] model saved to {mjb}"); }
   }
 
   public void ResetToHome() {
@@ -175,8 +177,22 @@ public unsafe class MattController : MonoBehaviour, IParitySource, IRacer {
     LastInferenceMs = (float)((Time.realtimeSinceStartupAsDouble - t0) * 1000.0);
     _ctrlStep++;
     if (_probe && _ctrlStep % 25 == 0) ContactProbe(a.model, d);
+    if (_probe && _ctrlStep <= 3) SelfContacts(a.model, d);
   }
 
+
+  /// <summary>-contactProbe, first control steps: Matt's own geom pairs in contact (the MJCF excludes should leave none
+  /// between excluded bodies) and the compiled exclude count.</summary>
+  void SelfContacts(MujocoLib.mjModel_* m, MujocoLib.mjData_* d) {
+    string N(int g) => System.Runtime.InteropServices.Marshal.PtrToStringAnsi(MujocoLib.mj_id2name(m, (int)MujocoLib.mjtObj.mjOBJ_GEOM, g));
+    var sb = new System.Text.StringBuilder();
+    for (int i = 0; i < d->ncon; i++) {
+      int g1 = d->contact[i].geom1, g2 = d->contact[i].geom2;
+      if (m->body_rootid[m->geom_bodyid[g1]] != BaseBody || m->body_rootid[m->geom_bodyid[g2]] != BaseBody) continue;
+      sb.Append($" {N(g1)}-{N(g2)}({d->contact[i].dist * 100:F1}cm)");
+    }
+    Debug.Log($"[SelfContacts] step {_ctrlStep} nexclude={m->nexclude}:{sb}");
+  }
   static readonly bool _probe = CliArgs.Has("-contactProbe");
   /// <summary>-contactProbe: twice a second, Matt's pelvis height, his geoms touching the world and the deepest penetration.</summary>
   void ContactProbe(MujocoLib.mjModel_* m, MujocoLib.mjData_* d) {
