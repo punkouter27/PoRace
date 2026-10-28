@@ -40,13 +40,13 @@ public unsafe class RaceTelemetry : MonoBehaviour {
   public string LastSummaryPath { get; private set; }
 
   void Start() {
-    if (race == null) race = FindAnyObjectByType<MultiRaceOrchestrator>();
+    if (!BroadcastUi.Wired(this, race, nameof(race))) return;
     if (sensors == null) sensors = FindAnyObjectByType<RaceSensors>();
     if (strain == null) strain = FindAnyObjectByType<StrainMonitor>();
     if (contacts == null) contacts = FindAnyObjectByType<ContactImpulse>();
     _dir = Path.Combine(Application.persistentDataPath, "telemetry");
-    var args = Environment.GetCommandLineArgs();
-    for (int i = 0; i + 1 < args.Length; i++) { if (args[i] == "-telemetryDir") _dir = args[i + 1]; if (args[i] == "-azureTableSas") _sas = args[i + 1]; }
+    if (CliArgs.TryString("-telemetryDir", out var td)) _dir = td;
+    if (CliArgs.TryString("-azureTableSas", out var sas)) _sas = sas;
     if (string.IsNullOrEmpty(_sas)) _sas = Environment.GetEnvironmentVariable("PORACE_AZURE_TABLE_SAS");
     if (string.IsNullOrEmpty(_sas)) _sas = PlayerPrefs.GetString("PoRace.azureSas", "");
     // The SAS URL is a write token: never send it anywhere but an Azure table endpoint over https.

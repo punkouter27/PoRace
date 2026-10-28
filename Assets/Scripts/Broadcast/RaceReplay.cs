@@ -30,7 +30,7 @@ public unsafe class RaceReplay : MonoBehaviour {
   Text _banner;
 
   void Start() {
-    if (race == null) race = FindAnyObjectByType<MultiRaceOrchestrator>();
+    if (!BroadcastUi.Wired(this, race, nameof(race))) return;
     if (director == null) director = FindAnyObjectByType<RaceDirector>();
     if (BroadcastUi.Headless) { enabled = false; return; }
     MjScene.Instance.postUpdateEvent += Record;

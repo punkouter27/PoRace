@@ -25,6 +25,13 @@ public unsafe class Go2Controller : MonoBehaviour, IParitySource, IRacer {
   bool IRacer.Locomoting => Active == Go2Mode.Locomotion;
   string IRacer.ModeName => Active.ToString();
   float IRacer.SimDt => SimDt;
+  public float MaxYawRate => 1.2f;   // joystick training range (go2/joystick.py command_config)
+  public bool UsesUnstick => true;   // braces when asked for >= 1.3 m/s from rest; a command-ramp restart frees it
+  public bool HoldsHeadingAtRest => false;
+  public bool FlatGroundOnly => false;
+  public string[] FootGeomNames => _feet ??= System.Array.ConvertAll(Go2Model.Legs, l => prefix + l);
+  public float FootStrikeMassScale => 1f;
+  string[] _feet;
   void IRacer.StartLocomotion() { mode = Go2Mode.Locomotion; command = Vector3.zero; }
 
   // ---- contract (training/go2/constants.py) ----
@@ -112,9 +119,9 @@ public unsafe class Go2Controller : MonoBehaviour, IParitySource, IRacer {
   }
 
   void Start() {
-    var args = System.Environment.GetCommandLineArgs();  // headless harness: -command vx vy yaw  -mode HoldHome|Locomotion|Getup
+    // headless harness: -command vx vy yaw  -mode HoldHome|Locomotion|Getup (a bad -mode warns and is ignored)
     if (RacerMath.TryCommandArg(out var cmd)) command = cmd;
-    for (int i = 0; i + 1 < args.Length; i++) if (args[i] == "-mode") mode = (Go2Mode)Enum.Parse(typeof(Go2Mode), args[i + 1]);
+    if (CliArgs.TryEnum("-mode", out Go2Mode m)) mode = m;
     if (locomotionModel != null) _loco = new PolicyRunner(locomotionModel, ObsJoystick, Nu);
     if (getupModel != null) _getup = new PolicyRunner(getupModel, ObsGetup, Nu);
   }

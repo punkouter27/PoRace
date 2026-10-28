@@ -24,9 +24,10 @@ public sealed class PolicyRunner : IDisposable {
     if (count != _obsDim) throw new ArgumentException($"obs {count} != model {_obsDim}");
     _input.Upload(obs);
     _worker.Schedule(_input);
-    using var result = (_worker.PeekOutput() as Tensor<float>).ReadbackAndClone();
-    var arr = result.DownloadToArray();
-    Array.Copy(arr, _output, _output.Length);
+    // CPU backend: the output already lives in CPU memory, so read it in place (no clone or array per inference)
+    var result = (Tensor<float>)_worker.PeekOutput();
+    result.CompleteAllPendingOperations();
+    result.AsReadOnlySpan().Slice(0, _output.Length).CopyTo(_output);
     return _output;
   }
 

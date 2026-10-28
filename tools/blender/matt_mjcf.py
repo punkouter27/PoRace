@@ -256,6 +256,9 @@ def pose(**kw):
   return " ".join(f"{kw.get(n.replace('_joint', ''), 0.0):.4g}" for n in order)
 
 
+# knees_bent is the env's default pose: the PD targets are default + action * scale and the pose costs pull towards
+# it. An upright stance (knee 0.25) was tried (m10, m11) and both settled into standing still: with the stock 2 m/s
+# pushes (see matt/env.py) an upright body cannot ride out a kick. Revisit with the race-scale pushes.
 bent = dict(left_hip_pitch=-0.25, right_hip_pitch=-0.25, left_knee=0.5, right_knee=0.5, left_ankle_pitch=-0.25,
             right_ankle_pitch=-0.25, left_shoulder_roll=-0.3, right_shoulder_roll=0.3, left_elbow=-0.3, right_elbow=-0.3)
 home = dict(left_shoulder_roll=-0.3, right_shoulder_roll=0.3, left_elbow=-0.15, right_elbow=-0.15)

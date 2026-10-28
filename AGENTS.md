@@ -16,6 +16,9 @@
 | Physics Solver | Bypass PhysX → MuJoCo (`org.mujoco`) | Bypass Chaos → MuJoCo / URLab |
 | Neural Inference | Unity Inference Engine (Sentis) / ONNX | NNE / ONNX Runtime / C++ |
 
+### Commands
+See the **Commands** section of `CLAUDE.md` for the editor helpers (`tools/ed.sh`), batch builds (`BuildCli.Windows`), headless race tests (`-raceTest`), the Docker trainer, and the run gates (`training/gate.sh`). Always start the trainer with `docker run --init --log-driver none`; without those flags the container became an unkillable zombie.
+
 ## 2. Training Lifecycle & Resource Management
 - **Trainer:** Train in MuJoCo (Docker trainer in `training/`). Start TensorBoard when a run launches.
 - **Headless Execution:** Close the editor for pure RL, runs > 30 min, or to reclaim memory.

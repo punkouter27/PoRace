@@ -33,11 +33,11 @@ public class BroadcastPost : MonoBehaviour {
   ColorAdjustments _grade; float _baseSaturation, _finishKick;
 
   void Start() {
-    if (race == null) race = FindAnyObjectByType<MultiRaceOrchestrator>();
+    if (!BroadcastUi.Wired(this, race, nameof(race))) return;
     if (director == null) director = FindAnyObjectByType<RaceDirector>();
     if (weather == null) weather = FindAnyObjectByType<TrackWeather>();
     if (BroadcastUi.Headless) { enabled = false; return; }
-    var cam = race.followCam != null ? race.followCam.GetComponent<Camera>() : Camera.main;
+    var cam = race.ViewCamera;
     if (cam != null) cam.GetUniversalAdditionalCameraData().renderPostProcessing = true;
     bool full = GfxTier.FullPost;
 

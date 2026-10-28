@@ -11,10 +11,11 @@ public class Hud : MonoBehaviour {
   public Go2Controller controller;
   public CubePool cubes;
   public Shove shove;
-  public AutoReset autoReset;
+  [OptionalRef] public AutoReset autoReset;   // resolved from the controller in Awake
   public Text title, telemetry, behaviour, version;
   public bool telemetryVisible = true;
   int _ticks, _lastTicks; float _fpsTimer; int _frames; float _fps, _tickRate;
+  Go2Mode _shownMode = (Go2Mode)(-1); RaceState _shownState = (RaceState)(-1);
 
   void Awake() {
     if (!Application.isBatchMode) { QualitySettings.vSyncCount = 0; Application.targetFrameRate = 60; }  // do not burn the GPU at 500+ fps
@@ -22,22 +23,28 @@ public class Hud : MonoBehaviour {
     if (autoReset == null) autoReset = controller.GetComponent<AutoReset>();
   }
 
+  void Start() {
+    if (title) title.text = "PoRace Go2";
+    if (version) version.text = BuildInfo.Watermark;   // YYMMDD build watermark, bottom-right
+  }
+
+  // Text is rebuilt only when it changes: behaviour on a mode / state change, telemetry twice a second.
   void Update() {
     if (Keyboard.current != null && Keyboard.current.tabKey.wasPressedThisFrame) telemetryVisible = !telemetryVisible;
     _frames++; _fpsTimer += Time.unscaledDeltaTime;
-    if (_fpsTimer >= 0.5f) {
+    bool tick = _fpsTimer >= 0.5f;
+    if (tick) {
       _fps = _frames / _fpsTimer; _tickRate = (_ticks - _lastTicks) / _fpsTimer;
       _frames = 0; _fpsTimer = 0f; _lastTicks = _ticks;
     }
-    if (title) title.text = "PoRace Go2";
-    if (version) version.text = BuildInfo.Watermark;   // YYMMDD build watermark, bottom-right
-    var state = autoReset != null ? autoReset.State.ToString() : (controller.Upright ? "RACING" : "FALLEN_RECOVERING");
-    if (behaviour) behaviour.text = $"{controller.mode}\n{state}";
+    var state = autoReset != null ? autoReset.State : (controller.Upright ? RaceState.RACING : RaceState.FALLEN_RECOVERING);
+    if (behaviour && (state != _shownState || controller.mode != _shownMode)) {
+      _shownState = state; _shownMode = controller.mode; behaviour.text = $"{controller.mode}\n{state}";
+    }
     if (telemetry) {
-      telemetry.enabled = telemetryVisible;
-      var d = MjScene.InstanceExists ? MjScene.Instance : null;
-      var vel = SpeedText();
-      telemetry.text = $"{_fps:F0} fps | sim {_tickRate:F0} Hz | ctrl {controller.ControlStep} | inf {controller.LastInferenceMs:F2} ms\n{vel} | cmd {controller.command}";
+      if (telemetry.enabled != telemetryVisible) telemetry.enabled = telemetryVisible;
+      if (tick && telemetryVisible)
+        telemetry.text = $"{_fps:F0} fps | sim {_tickRate:F0} Hz | ctrl {controller.ControlStep} | inf {controller.LastInferenceMs:F2} ms\n{SpeedText()} | cmd {controller.command}";
     }
   }
 
@@ -47,17 +54,9 @@ public class Hud : MonoBehaviour {
     return $"v ({d->qvel[M.BaseDof]:F2}, {d->qvel[M.BaseDof + 1]:F2}) m/s";
   }
 
-  public RaceOrchestrator race;
-  public MultiRaceOrchestrator multiRace;
-  public void OnReset() { if (multiRace != null) multiRace.Restart(); else if (race != null) race.Restart(); else controller.ResetToHome(); }
-  public void OnShove() {
-    if (multiRace != null) {
-      var l = multiRace.Leader();
-      if (l.matt != null) { float a = Random.Range(0f, Mathf.PI * 2f); Shove.PushRobot(l.Body, new Vector3(Mathf.Cos(a), Mathf.Sin(a), 0f)); return; }
-      shove.target = l.controller;
-    }
-    shove.PushRandom();
-  }
+  [OptionalRef] public MultiRaceOrchestrator multiRace;   // null on the testbeds (single dog)
+  public void OnReset() { if (multiRace != null) multiRace.Restart(); else controller.ResetToHome(); }
+  public void OnShove() => Shove.PushRobot(multiRace != null ? multiRace.Leader().Body : controller, shove.impulse, shove.durationSteps);
   public void OnCube() => cubes.ThrowAtRobot(3f, multiRace != null ? multiRace.Leader().Body : null);
   public void OnDrop() => cubes.DropOnRobot(multiRace != null ? multiRace.Leader().Body : null);
   public void OnMode(int m) => controller.mode = (Go2Mode)m;

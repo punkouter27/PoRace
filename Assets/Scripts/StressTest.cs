@@ -16,13 +16,10 @@ public unsafe class StressTest : MonoBehaviour {
   static readonly float[] Lo = { -1.0472f, -1.5708f, -2.7227f }, Hi = { 1.0472f, 3.4907f, -0.83776f };
 
   void Awake() {
-    var args = Environment.GetCommandLineArgs();
-    for (int i = 0; i < args.Length; i++) {
-      if (args[i] == "-stress") _on = true;
-      if (args[i] == "-getupTest") { _on = true; _getupTest = true; }
-      if (args[i] == "-comboTest") { _on = true; _combo = true; }
-      if (args[i] == "-stressSeed" && i + 1 < args.Length) UnityEngine.Random.InitState(int.Parse(args[i + 1]));
-    }
+    if (CliArgs.Has("-stress")) _on = true;
+    if (CliArgs.Has("-getupTest")) { _on = true; _getupTest = true; }
+    if (CliArgs.Has("-comboTest")) { _on = true; _combo = true; }
+    if (CliArgs.TryInt("-stressSeed", out int ss)) UnityEngine.Random.InitState(ss);
     if (!_on) return;
     var ar = controller.GetComponent<AutoReset>(); if (ar != null) ar.enabled = false;  // a reset would fake a recovery
     MjScene.Instance.postUpdateEvent += OnPostStep;
@@ -38,7 +35,7 @@ public unsafe class StressTest : MonoBehaviour {
     if (t > 2.5) { _minUp = Math.Min(_minUp, up); if (up <= 0 && _ok) { _ok = false; _fellAt = t; } }
     if (t >= 8.0) {
       _done = true;
-      Debug.Log($"[Stress] {(_ok ? "SURVIVED" : "FELL")} minUpZ={_minUp:F3} baseZ={a.data->qpos[controller.Model.BaseQpos + 2]:F3} fellAt={_fellAt:F2}s pushDir=({shove.LastDir.x:F2},{shove.LastDir.y:F2})");
+      Debug.Log($"[Stress] {(_ok ? "SURVIVED" : "FELL")} minUpZ={_minUp:F3} baseZ={a.data->qpos[controller.Model.BaseQpos + 2]:F3} fellAt={_fellAt:F2}s pushDir=({Shove.LastDir.x:F2},{Shove.LastDir.y:F2})");
       Application.Quit(_ok ? 0 : 1);
     }
   }

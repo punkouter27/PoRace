@@ -18,10 +18,7 @@ public class ReplayHarness : MonoBehaviour {
   public float tolerance = 1e-4f;
 
   void Start() {
-    var args = Environment.GetCommandLineArgs();
-    string path = null;
-    for (int i = 0; i + 1 < args.Length; i++) if (args[i] == "-replay") path = args[i + 1];
-    if (path == null) return;
+    if (!CliArgs.TryString("-replay", out var path)) return;
     int code = Run(path, model != null ? model : controller.locomotionModel, obsDim) ? 0 : 1;
     Application.Quit(code);
   }

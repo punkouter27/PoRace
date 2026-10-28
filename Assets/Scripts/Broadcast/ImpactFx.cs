@@ -11,12 +11,21 @@ namespace PoRace {
 ///   scuffs  dark marks left where feet slide and bodies or cubes land, laid on the contact plane; a fixed pool
 ///           (GfxTier.Scuffs), oldest recycled, faded out over their last 30 %
 ///   shake   camera trauma for hits on or near the director's subject
+///   dust colour (B8) by surface: the map's track dust (tan dirt on the steeplechase, light concrete on the flat maps,
+///           cool grey concrete on the banked oval), pale sawdust off obstacles, grey grit robot on robot; none off
+///           metal (sparks only) and none on a wet track (TrackWeather)
+///   footfall rings (B3) a faint ring in the racer's colour at each foot strike (RaceSensors.FootStrike), wider the
+///           faster the racer runs, laid on the ground slope: the gait rhythm at a glance (GfxTier.FootRings alive)
+///   confetti (B4) one pooled burst when a racer finishes: the winner's is the big one (GfxTier.Confetti), later
+///           finishers a fifth of it, in the racer's colour plus gold and white
 /// Bursts are capped per frame (GfxTier.BurstsPerFrame) and nothing is emitted beyond cullDistance from the camera.
 /// Headless runs skip all of it.</summary>
 public class ImpactFx : MonoBehaviour {
   public MultiRaceOrchestrator race;
   public ContactImpulse contacts;
   public RaceDirector director;
+  public RaceSensors sensors;
+  public TrackWeather weather;
   public Material particleMaterial;
   public Material decalMaterial;
   public float rippleImpulse = 3f;
@@ -24,7 +33,8 @@ public class ImpactFx : MonoBehaviour {
   public float scuffLife = 25f;
   public float cullDistance = 30f;
 
-  ParticleSystem _dust, _sparks, _rings;
+  ParticleSystem _dust, _sparks, _rings, _footRings, _confetti;
+  Color _trackDust;
   int _frame, _bursts, _puffs;
   class Scuff { public Transform t; public MeshRenderer r; public float born = -1f, shown = -1f; }
   readonly List<Scuff> _scuffs = new List<Scuff>(); int _scuffNext;
@@ -32,30 +42,58 @@ public class ImpactFx : MonoBehaviour {
   MaterialPropertyBlock _mpb;
   Camera _cam;
   static readonly int BaseColor = Shader.PropertyToID("_BaseColor"), BaseMap = Shader.PropertyToID("_BaseMap");
-  static readonly Color ScuffColor = new Color(0.12f, 0.1f, 0.08f, 0.55f);
+  static readonly Color ScuffColor = new Color(0.12f, 0.1f, 0.08f, 0.55f), SparkColor = new Color(1f, 0.92f, 0.6f, 1f);
 
   void Start() {
-    if (race == null) race = FindAnyObjectByType<MultiRaceOrchestrator>();
-    if (contacts == null) contacts = FindAnyObjectByType<ContactImpulse>();
+    if (!BroadcastUi.Wired(this, race, nameof(race)) || !BroadcastUi.Wired(this, contacts, nameof(contacts))) return;
     if (director == null) director = FindAnyObjectByType<RaceDirector>();
-    if (BroadcastUi.Headless || contacts == null) { enabled = false; return; }
-    _cam = race.followCam != null ? race.followCam.GetComponent<Camera>() : Camera.main;
+    if (sensors == null) sensors = FindAnyObjectByType<RaceSensors>();
+    if (weather == null) weather = FindAnyObjectByType<TrackWeather>();
+    if (BroadcastUi.Headless) { enabled = false; return; }
+    _cam = race.ViewCamera;
     _mpb = new MaterialPropertyBlock();
-    _dust = MakeDust(); _sparks = MakeSparks(); _rings = MakeRings();
+    _trackDust = TrackDust(race.map != null ? race.map.terrain : "");
+    _dust = MakeDust(); _sparks = MakeSparks(); _rings = MakeRings(); _footRings = MakeFootRings(); _confetti = MakeConfetti();
     MakeScuffPool();
     contacts.Impact += OnImpact;
     contacts.Slip += OnSlip;
-    race.Restarted += () => { foreach (var s in _scuffs) { s.born = -1f; s.r.enabled = false; } };
+    if (sensors != null) sensors.FootStrike += OnFootStrike;
+    race.Finished += Confetti;
+    race.Restarted += () => { foreach (var s in _scuffs) { s.born = -1f; s.r.enabled = false; } _confetti.Clear(); };
   }
 
   bool Near(Vector3 p) => _cam == null || (_cam.transform.position - p).sqrMagnitude < cullDistance * cullDistance;
+
+  // ---- B8 surface dust palette ------------------------------------------------------------------------------------
+
+  static Color TrackDust(string terrain) {
+    switch (terrain) {
+      case "obstacles": return new Color(0.7f, 0.56f, 0.38f, 0.6f);     // tan dirt
+      case "banked": return new Color(0.6f, 0.62f, 0.66f, 0.5f);        // cool grey concrete
+      default: return new Color(0.74f, 0.7f, 0.62f, 0.55f);             // light concrete
+    }
+  }
+  static readonly Color Sawdust = new Color(0.82f, 0.7f, 0.5f, 0.55f), Grit = new Color(0.45f, 0.46f, 0.48f, 0.4f);
+
+  bool Wet => weather != null && weather.Active && weather.Grip < 0.97f;
+
+  /// <summary>Dust colour off a struck surface; alpha 0 = no dust (metal, or a wet track).</summary>
+  Color Dust(Surface s) {
+    switch (s) {
+      case Surface.Track: return Wet ? Color.clear : _trackDust;
+      case Surface.Wood: return Wet ? Color.clear : Sawdust;
+      case Surface.Metal: return Color.clear;
+      default: return Grit;
+    }
+  }
 
   void OnImpact(ContactImpulse.Hit h) {
     if (Time.frameCount != _frame) { _frame = Time.frameCount; _bursts = 0; _puffs = 0; }
     if (!Near(h.pos)) return;
     if (h.kind == ContactKind.Foot) {
       float kf = Mathf.Clamp01(h.impulse / 3f);
-      if (h.impulse > 2f && _puffs++ < 3) Emit(_dust, h.pos, h.normal, 1 + (int)(2 * kf), 0.4f + 0.5f * kf, 0.5f + 0.3f * kf);
+      var fc = Dust(h.surface);
+      if (h.impulse > 2f && fc.a > 0f && _puffs++ < 3) Emit(_dust, h.pos, h.normal, 1 + (int)(2 * kf), 0.4f + 0.5f * kf, 0.5f + 0.3f * kf, fc);
       if (h.surface == Surface.Track && h.impulse > 2.5f) AddScuff(h.pos, h.normal, 0.12f, 0.08f);
       return;
     }
@@ -66,9 +104,10 @@ public class ImpactFx : MonoBehaviour {
       director.AddTrauma(k * (subject ? 0.55f : 0.3f * near));
     }
     if (_bursts++ >= GfxTier.BurstsPerFrame) return;
-    Emit(_dust, h.pos, h.normal, 8 + (int)(40 * k), 0.6f + 1.4f * k, 1f + 0.8f * k);
+    var dc = Dust(h.surface);
+    if (dc.a > 0f) Emit(_dust, h.pos, h.normal, (h.surface == Surface.Robot ? 4 : 8) + (int)(40 * k), 0.6f + 1.4f * k, 1f + 0.8f * k, dc);
     bool metal = h.surface == Surface.Metal || h.kind == ContactKind.RobotRobot || h.kind == ContactKind.Cube;
-    if (metal && h.impulse > 1f) Emit(_sparks, h.pos, h.normal, 4 + (int)(24 * k), 1f + 1.5f * k, 1f);
+    if (metal && h.impulse > 1f) Emit(_sparks, h.pos, h.normal, 4 + (int)(24 * k), 1f + 1.5f * k, 1f, SparkColor);
     if (h.impulse >= rippleImpulse && (h.surface == Surface.Track || h.surface == Surface.Wood)) Ring(h.pos, h.normal, 0.7f + 1.3f * k);
     if (h.surface == Surface.Track && h.impulse > 1.5f) AddScuff(h.pos, h.normal, 0.2f + 0.35f * k, 0.15f + 0.25f * k);
   }
@@ -80,7 +119,34 @@ public class ImpactFx : MonoBehaviour {
     _lastScuff[key] = Time.time;
     float k = Mathf.Clamp01((slip - scuffSlip) / 1.2f);
     AddScuff(pos, normal, 0.12f + 0.25f * k, 0.05f + 0.04f * k);
-    if (slip > 0.9f && _puffs++ < 4) Emit(_dust, pos, normal, 1 + (int)(2 * k), 0.4f + 0.4f * k, 0.6f);
+    var c = Dust(surface);
+    if (slip > 0.9f && c.a > 0f && _puffs++ < 4) Emit(_dust, pos, normal, 1 + (int)(2 * k), 0.4f + 0.4f * k, 0.6f, c);
+  }
+
+  // ---- B3 footfall rings, B4 confetti -----------------------------------------------------------------------------
+
+  float Ground(Vector3 p) => race.followCam != null && race.followCam.groundHeight != null ? race.followCam.groundHeight(p) : p.y;
+
+  /// <summary>RaceSensors.FootStrike (physics step, main thread): one ring at the foot, on the ground's slope.</summary>
+  void OnFootStrike(Racer r, int foot, Vector3 pos, float speed) {
+    if (!Near(pos)) return;
+    float h = Ground(pos);
+    float hx = Ground(pos + Vector3.right * 0.2f) - Ground(pos - Vector3.right * 0.2f), hz = Ground(pos + Vector3.forward * 0.2f) - Ground(pos - Vector3.forward * 0.2f);
+    var n = new Vector3(-hx / 0.4f, 1f, -hz / 0.4f).normalized;
+    float k = Mathf.Clamp01(speed / 2.5f);
+    var c = r.color; c.a = 0.35f + 0.25f * k;
+    _footRings.Emit(new ParticleSystem.EmitParams { position = new Vector3(pos.x, h + 0.006f, pos.z), rotation3D = Quaternion.FromToRotation(Vector3.back, n).eulerAngles,
+      startSize = 0.22f + 0.28f * k, startColor = c, applyShapeToPosition = false }, 1);
+  }
+
+  void Confetti(Racer r) {
+    var b = r.Body.BaseTransform; if (b == null || !Near(b.position)) return;
+    var g = new Gradient();   // once per finish
+    g.SetKeys(new[] { new GradientColorKey(r.color, 0f), new GradientColorKey(new Color(1f, 0.82f, 0.2f), 0.45f), new GradientColorKey(Color.white, 0.7f), new GradientColorKey(r.color, 1f) },
+      new[] { new GradientAlphaKey(1f, 0f), new GradientAlphaKey(1f, 1f) });
+    var main = _confetti.main; main.startColor = new ParticleSystem.MinMaxGradient(g) { mode = ParticleSystemGradientMode.RandomColor };
+    bool first = r.place == 1; main.startSpeedMultiplier = first ? 1f : 0.7f;
+    _confetti.Emit(new ParticleSystem.EmitParams { position = b.position + Vector3.up * 0.5f, applyShapeToPosition = true }, first ? GfxTier.Confetti : GfxTier.Confetti / 5);
   }
 
   // ---- particles --------------------------------------------------------------------------------------------------
@@ -88,11 +154,11 @@ public class ImpactFx : MonoBehaviour {
   static Quaternion Up(Vector3 n) => Quaternion.FromToRotation(Vector3.up, n.sqrMagnitude > 0.01f ? n.normalized : Vector3.up);
 
   /// <summary>Emit with the shape cone along the contact normal and speed / size scaled for this burst only.</summary>
-  static void Emit(ParticleSystem ps, Vector3 pos, Vector3 normal, int count, float speed, float size) {
+  static void Emit(ParticleSystem ps, Vector3 pos, Vector3 normal, int count, float speed, float size, Color color) {
     if (ps == null || count <= 0) return;
     var main = ps.main; main.startSpeedMultiplier = speed; main.startSizeMultiplier = size;
     var sh = ps.shape; sh.rotation = (Up(normal) * Quaternion.Euler(-90f, 0f, 0f)).eulerAngles;
-    ps.Emit(new ParticleSystem.EmitParams { position = pos + normal * 0.02f, applyShapeToPosition = true }, count);
+    ps.Emit(new ParticleSystem.EmitParams { position = pos + normal * 0.02f, startColor = color, applyShapeToPosition = true }, count);
   }
 
   void Ring(Vector3 pos, Vector3 normal, float size) {
@@ -150,6 +216,37 @@ public class ImpactFx : MonoBehaviour {
     ps.Play(); return ps;
   }
 
+  ParticleSystem MakeFootRings() {
+    var mat = new Material(decalMaterial) { name = "FootRing" }; mat.SetTexture(BaseMap, RingTexture()); mat.SetColor(BaseColor, Color.white);
+    var ps = NewSystem("FootRings", mat);
+    var main = ps.main; main.startLifetime = 0.6f; main.startSpeed = 0f; main.startRotation3D = true; main.maxParticles = GfxTier.FootRings;
+    var sh = ps.shape; sh.enabled = false;
+    var col = ps.colorOverLifetime; col.enabled = true; col.color = Fade(Color.white, Color.white);
+    var size = ps.sizeOverLifetime; size.enabled = true; size.size = new ParticleSystem.MinMaxCurve(1f, new AnimationCurve(new Keyframe(0f, 0.3f, 0f, 2f), new Keyframe(1f, 1f, 0.2f, 0f)));
+    var rend = ps.GetComponent<ParticleSystemRenderer>(); rend.renderMode = ParticleSystemRenderMode.Mesh; rend.mesh = Quad(); rend.alignment = ParticleSystemRenderSpace.World;
+    ps.Play(); return ps;
+  }
+
+  /// <summary>Two-sided paper squares (decal shader, Cull Off) tumbling in 3D as they drift down.</summary>
+  ParticleSystem MakeConfetti() {
+    var mat = new Material(decalMaterial) { name = "Confetti" }; mat.SetTexture(BaseMap, Texture2D.whiteTexture); mat.SetColor(BaseColor, Color.white);
+    var ps = NewSystem("Confetti", mat);
+    var main = ps.main; main.maxParticles = GfxTier.Confetti * 3 / 2;
+    main.startLifetime = new ParticleSystem.MinMaxCurve(2f, 3.2f); main.startSpeed = new ParticleSystem.MinMaxCurve(2.5f, 5f);
+    main.startSize = new ParticleSystem.MinMaxCurve(0.03f, 0.06f); main.startRotation3D = true;
+    main.startRotationX = main.startRotationY = main.startRotationZ = new ParticleSystem.MinMaxCurve(0f, 2f * Mathf.PI);
+    main.gravityModifier = 0.25f;
+    var sh = ps.shape; sh.shapeType = ParticleSystemShapeType.Cone; sh.angle = 28f; sh.radius = 0.15f; sh.rotation = new Vector3(-90f, 0f, 0f);
+    var rot = ps.rotationOverLifetime; rot.enabled = true; rot.separateAxes = true;
+    rot.x = new ParticleSystem.MinMaxCurve(-9f, 9f); rot.y = new ParticleSystem.MinMaxCurve(-9f, 9f); rot.z = new ParticleSystem.MinMaxCurve(-4f, 4f);
+    var drag = ps.limitVelocityOverLifetime; drag.enabled = true; drag.drag = 1.6f;
+    var col = ps.colorOverLifetime; col.enabled = true;
+    var g = new Gradient(); g.SetKeys(new[] { new GradientColorKey(Color.white, 0f), new GradientColorKey(Color.white, 1f) }, new[] { new GradientAlphaKey(1f, 0f), new GradientAlphaKey(1f, 0.8f), new GradientAlphaKey(0f, 1f) });
+    col.color = g;
+    var rend = ps.GetComponent<ParticleSystemRenderer>(); rend.renderMode = ParticleSystemRenderMode.Mesh; rend.mesh = Quad(); rend.alignment = ParticleSystemRenderSpace.World;
+    ps.Play(); return ps;
+  }
+
   // ---- scuffs -----------------------------------------------------------------------------------------------------
 
   void MakeScuffPool() {
@@ -200,7 +297,8 @@ public class ImpactFx : MonoBehaviour {
     return _quad;
   }
 
-  static Texture2D Tex(int w, int h, System.Func<float, float, float> alpha, string name) {
+  /// <summary>White texture with alpha(u, v), u and v in -1..1 (also SpeedLines' streaks).</summary>
+  internal static Texture2D Tex(int w, int h, System.Func<float, float, float> alpha, string name) {
     var t = new Texture2D(w, h, TextureFormat.RGBA32, true) { name = name, wrapMode = TextureWrapMode.Clamp };
     var px = new Color32[w * h];
     for (int y = 0; y < h; y++) for (int x = 0; x < w; x++) {

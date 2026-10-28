@@ -14,11 +14,8 @@ public class FrameProbe : MonoBehaviour {
 
   [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
   static void Boot() {
-    var args = System.Environment.GetCommandLineArgs(); float seconds = -1f, warmup = 15f;
-    for (int i = 0; i + 1 < args.Length; i++) {
-      if (args[i] == "-frameProbe") seconds = float.Parse(args[i + 1], CultureInfo.InvariantCulture);
-      if (args[i] == "-frameWarmup") warmup = float.Parse(args[i + 1], CultureInfo.InvariantCulture);
-    }
+    if (!CliArgs.TryFloat("-frameProbe", out float seconds)) seconds = -1f;
+    if (!CliArgs.TryFloat("-frameWarmup", out float warmup)) warmup = 15f;
     if (seconds <= 0f) return;
     QualitySettings.vSyncCount = 0; Application.targetFrameRate = -1;
     var go = new GameObject("FrameProbe"); DontDestroyOnLoad(go);

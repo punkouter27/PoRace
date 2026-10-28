@@ -9,7 +9,7 @@ using UnityEngine;
 
 namespace PoRace {
 
-/// <summary>Live chat input for features 5 (hazards) and 6 (bets). Joins a Twitch channel's chat anonymously and
+/// <summary>Live chat input for features 5 (hazards), 6 (bets) and the crowd nudge vote (NudgeVote, !nudge &lt;who&gt;). Joins a Twitch channel's chat anonymously and
 /// read-only (IRC over WebSocket, nick justinfanNNNN: no account, token or app registration needed) and raises
 /// Message(user, text) on the main thread. Channel: menu field (RaceConfig.twitchChannel) or -twitch &lt;channel&gt;.
 /// -chatScript "4:alice:!drop gold|9:bob:!bet blue" injects messages at race seconds (tests, demos, no network).</summary>
@@ -25,21 +25,29 @@ public class ChatLink : MonoBehaviour {
 
   void Start() {
     if (race == null) race = FindAnyObjectByType<MultiRaceOrchestrator>();
-    var args = Environment.GetCommandLineArgs();
-    bool test = Array.IndexOf(args, "-raceTest") >= 0;   // headless tests: only an explicit -twitch / -chatScript
+    bool test = CliArgs.RaceTest;   // headless tests: only an explicit -twitch / -chatScript
     if (RaceConfig.fromMenu && !test && !string.IsNullOrWhiteSpace(RaceConfig.twitchChannel)) channel = RaceConfig.twitchChannel;
-    for (int i = 0; i + 1 < args.Length; i++) {
-      if (args[i] == "-twitch") channel = args[i + 1];
-      if (args[i] == "-chatScript") _script = Array.ConvertAll(args[i + 1].Split('|'), e => {
-        var p = e.Split(new[] { ':' }, 3); return (float.Parse(p[0], CultureInfo.InvariantCulture), p[1], p[2]);
-      });
-    }
+    if (CliArgs.TryString("-twitch", out var tw)) channel = tw;
+    if (CliArgs.TryString("-chatScript", out var cs)) _script = Array.ConvertAll(cs.Split('|'), e => {
+      var p = e.Split(new[] { ':' }, 3); return (float.Parse(p[0], CultureInfo.InvariantCulture), p[1], p[2]);
+    });
     channel = channel.Trim().TrimStart('#').ToLowerInvariant();
     if (channel.Length > 0) { _cts = new CancellationTokenSource(); _ = Run(channel, _cts.Token); }
     else if (_script.Length > 0) Status = "script";
   }
 
   void OnDestroy() { _cts?.Cancel(); }
+
+  /// <summary>A chat line as a lower-case "!command" and its first argument ("" when none); false when it is not a
+  /// command. For the chat consumers (NudgeVote; HazardDesk parses its own).</summary>
+  public static bool Parse(string text, out string cmd, out string arg) {
+    cmd = arg = "";
+    if (string.IsNullOrEmpty(text)) return false;
+    var parts = text.Trim().ToLowerInvariant().Split(new[] { ' ' }, 3, StringSplitOptions.RemoveEmptyEntries);
+    if (parts.Length == 0 || parts[0].Length < 2 || parts[0][0] != '!') return false;
+    cmd = parts[0]; arg = parts.Length > 1 ? parts[1] : "";
+    return true;
+  }
 
   /// <summary>Local input (keyboard / buttons / script) goes through the same path as chat.</summary>
   public void Inject(string user, string text) => _in.Enqueue((user, text));

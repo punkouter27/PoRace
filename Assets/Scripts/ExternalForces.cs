@@ -19,7 +19,7 @@ public unsafe class ExternalForces : MonoBehaviour {
   struct Push { public int body; public Vector3 force; public int steps; }
   readonly List<Push> _pushes = new List<Push>();
   readonly Dictionary<int, Vector3> _steady = new Dictionary<int, Vector3>();
-  readonly HashSet<int> _touched = new HashSet<int>(), _now = new HashSet<int>();
+  readonly HashSet<int> _touched = new HashSet<int>();
   readonly Dictionary<int, Vector3> _sum = new Dictionary<int, Vector3>();
 
   void Awake() { if (_instance == null) _instance = this; MjScene.Instance.preUpdateEvent += OnPreStep; }
@@ -31,17 +31,17 @@ public unsafe class ExternalForces : MonoBehaviour {
   public void SetSteady(int body, Vector3 force) { if (force.sqrMagnitude < 1e-12f) _steady.Remove(body); else _steady[body] = force; }
 
   void OnPreStep(object sender, MjStepArgs a) {
-    _sum.Clear(); _now.Clear();
-    foreach (var kv in _steady) { _sum[kv.Key] = kv.Value; _now.Add(kv.Key); }
+    _sum.Clear();
+    foreach (var kv in _steady) _sum[kv.Key] = kv.Value;
     for (int i = _pushes.Count - 1; i >= 0; i--) {
       var p = _pushes[i];
-      _sum[p.body] = (_sum.TryGetValue(p.body, out var f) ? f : Vector3.zero) + p.force; _now.Add(p.body);
+      _sum[p.body] = (_sum.TryGetValue(p.body, out var f) ? f : Vector3.zero) + p.force;
       if (--p.steps <= 0) _pushes.RemoveAt(i); else _pushes[i] = p;
     }
     var x = a.data->xfrc_applied;
-    foreach (int b in _touched) if (!_now.Contains(b)) { x[6 * b] = 0; x[6 * b + 1] = 0; x[6 * b + 2] = 0; }
+    foreach (int b in _touched) if (!_sum.ContainsKey(b)) { x[6 * b] = 0; x[6 * b + 1] = 0; x[6 * b + 2] = 0; }
     foreach (var kv in _sum) { x[6 * kv.Key] = kv.Value.x; x[6 * kv.Key + 1] = kv.Value.y; x[6 * kv.Key + 2] = kv.Value.z; }
-    _touched.Clear(); foreach (int b in _now) _touched.Add(b);
+    _touched.Clear(); foreach (int b in _sum.Keys) _touched.Add(b);
   }
 }
 

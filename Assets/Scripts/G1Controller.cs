@@ -47,9 +47,8 @@ public unsafe class G1Controller : MonoBehaviour, IParitySource {
 
   void Awake() {
     Time.fixedDeltaTime = G1Spec.SimDt;
-    var args = Environment.GetCommandLineArgs();
     if (RacerMath.TryCommandArg(out var cmd)) command = cmd;
-    for (int i = 0; i + 1 < args.Length; i++) if (args[i] == "-mode" && Enum.TryParse(args[i + 1], out Mode m)) mode = m;
+    if (CliArgs.TryEnum("-mode", out Mode m)) mode = m;
     MjScene.Instance.postInitEvent += OnInit;
     MjScene.Instance.preUpdateEvent += OnPre;
     MjScene.Instance.ctrlCallback += OnCtrl;
@@ -100,7 +99,7 @@ public unsafe class G1Controller : MonoBehaviour, IParitySource {
     Must(m->opt.integrator == (int)MujocoLib.mjtIntegrator.mjINT_EULER && m->opt.cone == (int)MujocoLib.mjtCone.mjCONE_PYRAMIDAL, "integrator/cone");
     Must(m->opt.iterations == 3 && m->opt.ls_iterations == 5 && m->opt.solver == 2, $"solver {m->opt.solver} iterations {m->opt.iterations}/{m->opt.ls_iterations}");
     Must(Math.Abs(m->opt.impratio - 1) < 1e-9, $"impratio {m->opt.impratio}");
-    double mass = 0; for (int b = 0; b < (int)m->nbody; b++) if (m->body_rootid[b] == pelvis) mass += m->body_mass[b];
+    double mass = RacerMath.RootMass(m, pelvis);
     Must(Math.Abs(mass - G1Spec.Mass) < 1e-3, $"mass {mass}");
     for (int i = 0; i < N; i++) {
       int a = _act[i];

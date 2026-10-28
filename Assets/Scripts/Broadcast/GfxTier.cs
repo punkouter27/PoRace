@@ -11,8 +11,7 @@ public static class GfxTier {
     get {
       if (_mobile == null) {
         _mobile = Application.isMobilePlatform || RaceConfig.autoplay;   // the self-running app keeps the GPU light
-        var args = System.Environment.GetCommandLineArgs();
-        for (int i = 0; i + 1 < args.Length; i++) if (args[i] == "-gfx") _mobile = args[i + 1] == "mobile";
+        if (CliArgs.TryString("-gfx", out var gfx)) _mobile = gfx == "mobile";
         if (_mobile.Value && !Application.isMobilePlatform) {
           int q = System.Array.IndexOf(QualitySettings.names, "Mobile"); if (q >= 0) QualitySettings.SetQualityLevel(q, true);
         }
@@ -32,6 +31,18 @@ public static class GfxTier {
   public static bool BlobShadows => Mobile;
   /// <summary>Vignette and chromatic aberration (bloom and colour grading run on both).</summary>
   public static bool FullPost => !Mobile;
+  /// <summary>B2 refraction shimmer over hot joints (needs the camera opaque texture); Mobile keeps the leg tint only.</summary>
+  public static bool HeatShimmer => !Mobile;
+  /// <summary>B5 team rim on every robot link (PC) or on the trunk / Matt's skin only (Mobile: one extra pass each).</summary>
+  public static bool TeamRimAll => !Mobile;
+  /// <summary>B3 footfall rings alive at once.</summary>
+  public static int FootRings => Mobile ? 24 : 64;
+  /// <summary>B4 confetti particles for the winner's burst (later finishers get a fifth).</summary>
+  public static int Confetti => Mobile ? 200 : 500;
+  /// <summary>B10 one-shot sound voices (impacts, steps, stingers), lowest priority stolen first.</summary>
+  public static int AudioVoices => Mobile ? 8 : 24;
+  /// <summary>B6 servo partials per racer: one per limb (PC) or one mixed whine (Mobile), always one voice per racer.</summary>
+  public static int ServoPartials => Mobile ? 1 : 4;
 }
 
 }

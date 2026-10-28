@@ -32,7 +32,7 @@ public class RaceDirector : MonoBehaviour {
   bool _inReplay;
 
   void Start() {
-    if (race == null) race = FindAnyObjectByType<MultiRaceOrchestrator>();
+    if (!BroadcastUi.Wired(this, race, nameof(race))) return;
     if (followCam == null) followCam = race.followCam;
     if (strain == null) strain = FindAnyObjectByType<StrainMonitor>();
     if (BroadcastUi.Headless || followCam == null) { enabled = false; return; }
@@ -82,11 +82,14 @@ public class RaceDirector : MonoBehaviour {
   Vector3 Pos(Racer r) => r != null && r.Body.BaseTransform != null ? r.Body.BaseTransform.position : Vector3.zero;
   Vector3 Fwd(Racer r) { race.map.PointAt(r.distance, out var t); return new Vector3(t.x, 0f, t.y); }
 
+  static readonly Shot[] ManualShots = { Shot.Pack, Shot.Leader, Shot.Trackside, Shot.Overhead };
+  static readonly Shot[] AutoCycle = { Shot.Pack, Shot.Leader, Shot.Trackside };
+
   void Update() {
     UndoShake();
     if (Keyboard.current != null && Keyboard.current.cKey.wasPressedThisFrame) {
       if (auto) auto = false;
-      else { var all = new[] { Shot.Pack, Shot.Leader, Shot.Trackside, Shot.Overhead }; Cut(all[(System.Array.IndexOf(all, Current) + 1) % all.Length], race.Leader(), null, 0f); }
+      else Cut(ManualShots[(System.Array.IndexOf(ManualShots, Current) + 1) % ManualShots.Length], race.Leader(), null, 0f);
     }
     if (_slowUntil > 0 && Time.unscaledTime > _slowUntil && !_inReplay) { Time.timeScale = 1f; _slowUntil = 0; }
     if (race.Phase == RacePhase.Countdown && Current != Shot.Pack && !_inReplay) Cut(Shot.Pack, null, null, 0f);
@@ -100,8 +103,7 @@ public class RaceDirector : MonoBehaviour {
       bool stale = held > maxHold || (Current == Shot.Trackside && Subject != null && Subject.distance > _fixedS + 3f)
                    || (Current == Shot.Incident && Subject != null && Subject.state == RaceState.RACING && held > minHold);
       if (stale && race.Phase == RacePhase.Racing) {
-        var cycle = new[] { Shot.Pack, Shot.Leader, Shot.Trackside };
-        var next = cycle[_rotation++ % cycle.Length];
+        var next = AutoCycle[_rotation++ % AutoCycle.Length];
         var subj = next == Shot.Leader ? lead : race.Live[Random.Range(0, race.Live.Count)];
         Cut(next, subj, null, 2f);
       }

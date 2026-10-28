@@ -41,16 +41,13 @@ public unsafe class TrackWeather : MonoBehaviour {
   Text _widget; ParticleSystem _rain; Light _sun; float _sunBase = -1f;
 
   void Start() {
-    if (race == null) race = FindAnyObjectByType<MultiRaceOrchestrator>();
+    if (!BroadcastUi.Wired(this, race, nameof(race))) return;
     int city = RaceConfig.fromMenu ? RaceConfig.weatherCity : -1; string offline = null;
-    var args = Environment.GetCommandLineArgs();
-    if (Array.IndexOf(args, "-raceTest") >= 0) city = -1;   // headless tests: only explicit -weather / -weatherCity
-    for (int i = 0; i < args.Length; i++) {
-      if (args[i] == "-noWeather") city = -1;
-      if (i + 1 < args.Length && args[i] == "-weather") offline = args[i + 1];
-      if (i + 1 < args.Length && args[i] == "-weatherCity") city = int.Parse(args[i + 1]);
-    }
-    if (!BroadcastUi.Headless) _widget = BroadcastUi.Label(BroadcastUi.Root, "Weather", Vector2.one, Vector2.one, new Vector2(-16, -222), new Vector2(330, 64), 19, TextAnchor.UpperRight);
+    if (CliArgs.RaceTest) city = -1;   // headless tests: only explicit -weather / -weatherCity
+    if (CliArgs.TryInt("-weatherCity", out int wc)) city = wc;
+    if (CliArgs.Has("-noWeather")) city = -1;
+    if (CliArgs.TryString("-weather", out var w)) offline = w;
+    if (!BroadcastUi.Headless) _widget = BroadcastUi.Label(BroadcastUi.Root, "Weather", Vector2.one, Vector2.one, new Vector2(-16, -222), new Vector2(400, 84), 22, TextAnchor.UpperRight);
     if (offline != null) Apply(Parse(offline), "offline");
     else if (city >= 0 && city < Cities.Length) StartCoroutine(Fetch(city));
     else if (_widget != null) _widget.text = "";

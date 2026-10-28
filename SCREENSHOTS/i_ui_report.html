@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PoRace UI Round 2</title>
+<style>
+:root{--bg:#f6f7f9;--fg:#1c2230;--muted:#5d6678;--card:#fff;--line:#dfe3ea;--acc:#1f7a4d;--warn:#b3541e}
+@media (prefers-color-scheme:dark){:root{--bg:#14171d;--fg:#e6e9ef;--muted:#9aa3b2;--card:#1c2028;--line:#2b313c;--acc:#4cc38a;--warn:#e08a55}}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.5 system-ui,-apple-system,Segoe UI,sans-serif}
+main{max-width:1100px;margin:0 auto;padding:24px 16px}
+h1{font-size:24px;margin:0 0 4px}h2{font-size:18px;margin:32px 0 8px}
+p,li{color:var(--muted)} b{color:var(--fg)}
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media (max-width:700px){.pair{grid-template-columns:1fr}}
+figure{margin:0;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:10px}
+figure img{width:100%;height:auto;display:block;border-radius:4px}
+figcaption{font-size:13px;margin-top:8px;color:var(--muted)}
+.tag{display:inline-block;font-size:12px;font-weight:600;padding:1px 8px;border-radius:10px;border:1px solid var(--line);margin-right:6px}
+.after .tag{color:var(--acc);border-color:var(--acc)} .before .tag{color:var(--warn);border-color:var(--warn)}
+table{border-collapse:collapse;width:100%;font-size:14px;background:var(--card)}
+td,th{border:1px solid var(--line);padding:6px 8px;text-align:left;vertical-align:top}
+.strip{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+@media (max-width:700px){.strip{grid-template-columns:repeat(2,1fr)}}
+</style></head>
+<body><main>
+<h1>PoRace UI, round 2 proposals (C1–C10)</h1>
+<p>Build 261027, Windows player, portrait 540×960 (9:16), Flat Oval seed 3. "Before" captures are the 261026 H-phase HUD and the roster menu, taken from earlier reports.</p>
+
+<h2>Race HUD</h2>
+<div class="pair">
+<figure class="before"><img src="i_before/race_before.png" alt="Race HUD before"><figcaption><span class="tag">Before</span>Text standings (TL), Drop / Cube / Shove / Restart stacked in the BL thumb zone, "GO" clock floating over the track.</figcaption></figure>
+<figure class="after"><img src="i_after/shot_02_14s.png" alt="Race HUD after"><figcaption><span class="tag">After</span><b>StandingsChips</b> (place, gap, effort bar) in one row TL · <b>PhaseBadge</b> race clock TC · <b>II</b> pause button TR · <b>PipCam</b> battle picture-in-picture · <b>HAZARD</b> radial hub BR (press, slide, release) · only Restart left BL · footfall rings under the dogs.</figcaption></figure>
+</div>
+
+<h2>First race: coach marks</h2>
+<div class="pair">
+<figure class="after"><img src="i_after/shot_01_6s.png" alt="Coach marks"><figcaption><span class="tag">After</span><b>CoachMarks</b> ring the chips, the pause button and the hazard hub once (PlayerPrefs <code>PoRace.coachSeen</code>; <code>-coach</code> forces them).</figcaption></figure>
+<figure class="after"><img src="i_after/shot_03_30s.png" alt="Racing at 30 s"><figcaption><span class="tag">After</span>Mid-race: chips reorder with a slide on overtakes; the gap reads "LEAD" / "+0.4s" / "DOWN".</figcaption></figure>
+</div>
+
+<h2>Menu</h2>
+<div class="pair">
+<figure class="before"><img src="i_before/menu_before.png" alt="Menu before"><figcaption><span class="tag">Before</span>Roster chips in the default livery.</figcaption></figure>
+<figure class="after"><img src="i_after/menu_00_2s.png" alt="Menu after"><figcaption><span class="tag">After</span><b>Colour-blind toggle</b> TL (Okabe-Ito palette + shape glyphs, used by the race too). First placed BL, where it covered START RACE on a 2:3 window: moved.</figcaption></figure>
+</div>
+
+<h2>Checks</h2>
+<table>
+<tr><th>Check</th><th>Result</th></tr>
+<tr><td><b>UiSelfTest</b> (<code>-raceTest</code>, all race scenes + menu)</td><td>ok in Menu, Track01x4, Track02, Track03, Track04 (7–9 fields, 6–13 buttons); exits 3 on a broken binding</td></tr>
+<tr><td><b>Text scale</b> (ShotProbe, 11 pt minimum on 720p@320 / 1080p@420 / 1440p@560)</td><td>First pass: 4 labels under 11 pt + 1 overflow. Fixed: PiP label 17→22, weather 19→22 (box 330→400), intent tags 20→22, menu version 20→22, coach caption box widened. Left: the developer telemetry line (16, TAB toggles it).</td></tr>
+<tr><td>Zero-scroll</td><td>All controls on one screen at 9:16; no ScrollRect anywhere.</td></tr>
+<tr><td>Not captured</td><td>Pause sheet, landscape (tablets), haptics (Android) — need input or a device.</td></tr>
+</table>
+</main></body></html>

@@ -48,7 +48,7 @@ public unsafe class ContactImpulse : MonoBehaviour {
   readonly int[] _count = new int[4]; readonly float[] _sum = new float[4], _max = new float[4];
 
   void Awake() {
-    if (race == null) race = FindAnyObjectByType<MultiRaceOrchestrator>();
+    if (!BroadcastUi.Wired(this, race, nameof(race))) return;
     MjScene.Instance.postUpdateEvent += OnPostStep;
   }
   void Start() { race.Restarted += () => _wear.Clear(); }
@@ -68,9 +68,8 @@ public unsafe class ContactImpulse : MonoBehaviour {
     _slip = new float[slots]; _slipPos = new Vector3[slots]; _slipN = new Vector3[slots]; _slipSurf = new Surface[slots];
     foreach (var r in race.Live) {
       var B = r.Body; if (B == null || !B.Ready) { _geomRacer = null; return; }
-      root[B.BaseBody] = r; float mass = 0f;
-      for (int b = 0; b < (int)m->nbody; b++) if (m->body_rootid[b] == B.BaseBody) mass += (float)m->body_mass[b];
-      robotMass[r] = mass;
+      root[B.BaseBody] = r;
+      robotMass[r] = (float)RacerMath.RootMass(m, B.BaseBody);
     }
     for (int g = 0; g < n; g++) {
       _geomFoot[g] = -1; int b = m->geom_bodyid[g];
@@ -83,10 +82,10 @@ public unsafe class ContactImpulse : MonoBehaviour {
       else { _cube[g] = true; _surface[g] = Surface.Cube; _mass[g] = (float)m->body_mass[b]; }
     }
     foreach (var r in race.Live) {
-      var feet = r.matt != null ? new[] { "left_foot", "right_foot" } : Array.ConvertAll(Go2Model.Legs, l => r.controller.prefix + l);
+      var feet = r.Body.FootGeomNames;
       for (int f = 0; f < feet.Length; f++) {
         int g = MujocoLib.mj_name2id(m, (int)MujocoLib.mjtObj.mjOBJ_GEOM, feet[f]);
-        if (g >= 0) { _geomFoot[g] = f; _mass[g] = r.matt != null ? footMass * 4f : footMass; }   // effective striking mass: a human foot brings the shank and foot (~5.4 kg for Matt)
+        if (g >= 0) { _geomFoot[g] = f; _mass[g] = footMass * r.Body.FootStrikeMassScale; }   // effective striking mass
       }
     }
   }

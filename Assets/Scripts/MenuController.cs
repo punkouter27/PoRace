@@ -13,18 +13,21 @@ public class MenuController : MonoBehaviour {
   public Image[] rosterChips;
   public InputField chatInput;
   MapDefinition[] _maps; int _i, _dogMask = 0b1111, _laps = 1, _weather; bool _matt;
+  Text _cbLabel;
 
   void Start() {
     _maps = MapRegistry.All();
     if (_maps.Length == 0) { if (mapText) mapText.text = "No maps in Resources/Maps"; return; }
-    var a = Environment.GetCommandLineArgs();
-    if (RaceConfig.autoplay && !Array.Exists(a, s => s == "-menuMap") && !Array.Exists(a, s => s == "-raceTest")) { RaceConfig.LaunchNextAutoplay(); return; }
+    if (RaceConfig.autoplay && !CliArgs.Has("-menuMap") && !CliArgs.RaceTest) { RaceConfig.LaunchNextAutoplay(); return; }
     _dogMask = PlayerPrefs.GetInt("PoRace.dogMask", 0b1111) & ((1 << RaceConfig.Dogs.Length) - 1);
     _weather = PlayerPrefs.GetInt("PoRace.weatherCity", -1);
     _matt = PlayerPrefs.GetInt("PoRace.matt", 0) == 1;
     if (chatInput) chatInput.text = PlayerPrefs.GetString("PoRace.twitch", "");
+    // C8 colour-blind palette toggle (BL corner); built at runtime so the menu scene needs no rebuild
+    _cbLabel = BroadcastUi.Button(transform, "BtnColorBlind", "", Vector2.up, Vector2.up, new Vector2(12, -12), new Vector2(250, 44),   // TL: clear of START RACE
+        new Color(0.08f, 0.09f, 0.12f, 0.9f), 20, () => { RacerPalette.ColorBlind = !RacerPalette.ColorBlind; Refresh(); }).GetComponentInChildren<Text>();
     SelectMap(0);
-    for (int i = 0; i + 1 < a.Length; i++) if (a[i] == "-menuMap") { SelectMap(int.Parse(a[i + 1])); Invoke(nameof(OnLaunch), 0.5f); }
+    if (CliArgs.TryInt("-menuMap", out int mm)) { SelectMap(mm); Invoke(nameof(OnLaunch), 0.5f); }
   }
 
   void SelectMap(int i) {
@@ -44,13 +47,14 @@ public class MenuController : MonoBehaviour {
     bool flat = m.terrain == "flat";
     for (int i = 0; rosterChips != null && i < rosterChips.Length; i++) {
       bool isMatt = i == RaceConfig.Dogs.Length, on = isMatt ? _matt && flat : (_dogMask >> i & 1) != 0;
-      var col = isMatt ? RaceConfig.MattColor : RaceConfig.Dogs[i].color;
+      var col = RacerPalette.Get(i, isMatt ? RaceConfig.MattColor : RaceConfig.Dogs[i].color);   // chip index = roster / palette index
       rosterChips[i].color = on ? col : new Color(col.r * 0.22f, col.g * 0.22f, col.b * 0.22f, 0.95f);
       var label = rosterChips[i].GetComponentInChildren<Text>();
-      label.text = (isMatt ? "Matt" : RaceConfig.Dogs[i].name) + "\n" + (isMatt && !flat ? "flat only" : on ? "IN" : "out");
+      label.text = RacerPalette.Glyph(i) + (RacerPalette.ColorBlind ? " " : "") + (isMatt ? "Matt" : RaceConfig.Dogs[i].name) + "\n" + (isMatt && !flat ? "flat only" : on ? "IN" : "out");
       label.color = on ? new Color(0.08f, 0.09f, 0.12f) : new Color(1f, 1f, 1f, isMatt && !flat ? 0.35f : 0.7f);
     }
     if (rosterText) rosterText.text = $"RACERS  {Count()}";
+    if (_cbLabel) _cbLabel.text = RacerPalette.ColorBlind ? "Colour-blind colours: ON" : "Colour-blind colours: off";
     if (weatherText) weatherText.text = _weather >= 0 && _weather < TrackWeather.Cities.Length ? "live: " + TrackWeather.Cities[_weather].name : "off";
   }
 

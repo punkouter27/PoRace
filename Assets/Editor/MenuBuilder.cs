@@ -81,7 +81,7 @@ public static class MenuBuilder {
     T(tr, "ChatLabel", C, new Vector2(0, -270), new Vector2(500, 40), 24, "TWITCH CHAT (optional)");
     mc.chatInput = Input(tr, "ChatChannel", new Vector2(0, -325), new Vector2(460, 64), "channel name");
     B(tr, "BtnStart", "START RACE", C, C, new Vector2(0, -470), new Vector2(420, 110), mc.OnLaunch, new Color(0.15f, 0.55f, 0.25f, 1f), 32);
-    T(tr, "Version", new Vector2(1f, 0f), new Vector2(-110, 30), new Vector2(200, 30), 20, "v" + PlayerSettings.bundleVersion).gameObject.AddComponent<Watermark>();
+    T(tr, "Version", new Vector2(1f, 0f), new Vector2(-110, 30), new Vector2(200, 30), 22, "v" + PlayerSettings.bundleVersion).gameObject.AddComponent<Watermark>();
     EditorSceneManager.SaveScene(scene, "Assets/Scenes/Menu.unity");
 
     foreach (var path in new[] { "Assets/Scenes/Track01x4.unity", "Assets/Scenes/Track02.unity", "Assets/Scenes/Track03.unity", "Assets/Scenes/Track04.unity" }) {

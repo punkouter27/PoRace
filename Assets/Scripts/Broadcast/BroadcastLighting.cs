@@ -22,10 +22,10 @@ public class BroadcastLighting : MonoBehaviour {
   readonly Dictionary<Racer, Blob> _blobs = new Dictionary<Racer, Blob>();
 
   void Start() {
-    if (race == null) race = FindAnyObjectByType<MultiRaceOrchestrator>();
+    if (!BroadcastUi.Wired(this, race, nameof(race))) return;
     if (director == null) director = FindAnyObjectByType<RaceDirector>();
     if (BroadcastUi.Headless) { enabled = false; return; }
-    _cam = race.followCam != null ? race.followCam.GetComponent<Camera>() : Camera.main;
+    _cam = race.ViewCamera;
     if (GfxTier.Spotlight) {
       var go = new GameObject("SubjectSpot"); go.transform.SetParent(transform, false);
       _spot = go.AddComponent<Light>(); _spot.type = LightType.Spot; _spot.spotAngle = spotAngle; _spot.innerSpotAngle = spotAngle * 0.45f;

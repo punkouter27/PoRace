@@ -7,6 +7,7 @@
 Outputs: <logdir>/tb (TensorBoard), <logdir>/checkpoints/<step>, <logdir>/params.pkl (brax.io.model).
 """
 import argparse
+import ast
 import functools
 import json
 import time
@@ -100,6 +101,8 @@ def main():
   ap.add_argument("--p_outer", type=float, default=None, help="steeple: share of spawns on the full-height outer ring")
   ap.add_argument("--cost_scale", type=float, default=None, help="scale the torque, energy and action-rate penalties (F.9: they grow with gait frequency)")
   ap.add_argument("--no_sigma_scale", action="store_true", help="keep the sharp tracking sigma with --vx_max (the progress reward now supplies the gradient the speed-scaled sigma was added for)")
+  ap.add_argument("--set", action="append", default=[], metavar="KEY=VALUE",
+                  help="env config override, dotted key, Python literal value (repeatable), e.g. realism.action_delay_prob=0.5")
   a = ap.parse_args()
 
   ppo_params = locomotion_params.brax_ppo_config(ENVS[a.env][2])
@@ -114,6 +117,10 @@ def main():
     if a.no_sigma_scale: cfg.reward_config.sigma_speed_scale = False
     if a.cost_scale is not None:
       for k in ("torques", "energy", "action_rate"): cfg.reward_config.scales[k] *= a.cost_scale
+    for kv in a.set:
+      key, val = kv.split("=", 1); *path, leaf = key.split("."); node = cfg
+      for p in path: node = node[p]
+      node[leaf] = ast.literal_eval(val)
     return cfg
   env, cfg = make_env(a.env, a.pert, a.cubes, num_worlds=ppo_params.num_envs, kick_max=a.kick_max, vx_max=a.vx_max, tilt_max=a.tilt_max, steeple=a.steeple, tweak=tweak)
   eval_env, _ = make_env(a.env, a.pert, a.cubes, num_worlds=ppo_params.get("num_eval_envs", 128), kick_max=a.kick_max, vx_max=a.vx_max, tilt_max=a.tilt_max, steeple=a.steeple, tweak=tweak)

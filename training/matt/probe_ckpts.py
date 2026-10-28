@@ -2,7 +2,7 @@
 test on a seed subset.
   python matt/probe_ckpts.py runs/m7 24084480 48168960 [--grad 20]
 """
-import contextlib, io, sys
+import contextlib, io, shutil, sys, tempfile
 from pathlib import Path
 
 import numpy as np
@@ -17,7 +17,13 @@ if "--grad" in args: i = args.index("--grad"); grad = int(args[i + 1]); del args
 run = Path(args[0])
 for step in args[1:]:
   out = run / f"params_{int(step):012d}.pkl"
-  if not out.exists(): model.save_params(str(out), ck.load(str((run / "checkpoints" / f"{int(step):012d}").resolve())))
+  if not out.exists():
+    # read a private copy: a probe holding files in the live checkpoints folder made the trainer's next save fail
+    # (Windows bind mount, PermissionError on the orbax tmp -> step rename, m9 @ 32M)
+    with tempfile.TemporaryDirectory() as td:
+      tmp = Path(td) / "ckpt"
+      shutil.copytree(run / "checkpoints" / f"{int(step):012d}", tmp)
+      model.save_params(str(out), ck.load(str(tmp)))
   params = model.load_params(str(out)); sim = base.G1Sim(params); rows = []
   for cmd in ([0, 0, 0], [1.0, 0, 0], [1.5, 0, 0], [1.5, 0, 0.6], [1.5, 0, -0.6], [1.0, 0.2, 0]):
     sim.reset(np.random.default_rng(0)); m = []; up = True

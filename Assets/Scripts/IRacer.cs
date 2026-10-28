@@ -3,8 +3,9 @@ using UnityEngine;
 namespace PoRace {
 
 /// <summary>What a race needs from any racing body sharing the race's MuJoCo model (Go2Controller, MattController):
-/// its base addresses, a steering command, spawn / reset at a checkpoint and the policy state. Creature-specific
-/// systems (leg strain, foot impacts, effort sensors) keep using the concrete controller.</summary>
+/// its base addresses, a steering command, spawn / reset at a checkpoint, the policy state and the facts about its
+/// policy's training envelope and feet that the race and broadcast layers need, so they don't branch on the creature.
+/// Leg strain and effort sensors still read the concrete controller.</summary>
 public unsafe interface IRacer {
   GameObject gameObject { get; }
   string name { get; }
@@ -28,6 +29,18 @@ public unsafe interface IRacer {
   bool Locomoting { get; }
   string ModeName { get; }
   float SimDt { get; }
+  /// <summary>Largest yaw-rate command inside the policy's trained (and graduated) range, rad/s.</summary>
+  float MaxYawRate { get; }
+  /// <summary>The race's un-stick (restart the command ramp when stalled at speed) helps this policy.</summary>
+  bool UsesUnstick { get; }
+  /// <summary>Steer to hold the track heading during the countdown (a policy that drifts on a zero command).</summary>
+  bool HoldsHeadingAtRest { get; }
+  /// <summary>The policy was trained on flat ground only: no banks, no obstacles.</summary>
+  bool FlatGroundOnly { get; }
+  /// <summary>Foot geom names in the shared MuJoCo model, in foot-index order.</summary>
+  string[] FootGeomNames { get; }
+  /// <summary>Effective striking mass of a foot as a multiple of the per-foot base mass (shank + foot for a human).</summary>
+  float FootStrikeMassScale { get; }
   void ResetToHome();
   void KnockOver();
   void RestartCommandRamp();
@@ -66,6 +79,12 @@ public static unsafe class RacerMath {
     obs[k++] = (float)(-(1 - 2 * (x * x + y * y)));
   }
 
+  /// <summary>Total mass of the bodies whose root is `root` (one racer in a shared model).</summary>
+  public static double RootMass(Mujoco.MujocoLib.mjModel_* m, int root) {
+    double mass = 0; for (int b = 0; b < (int)m->nbody; b++) if (m->body_rootid[b] == root) mass += m->body_mass[b];
+    return mass;
+  }
+
   /// <summary>Slew-limited joystick command: each component moves at most `step` toward the target.</summary>
   public static Vector3 Slew(Vector3 from, Vector3 to, float step) =>
     new Vector3(Mathf.MoveTowards(from.x, to.x, step), Mathf.MoveTowards(from.y, to.y, step), Mathf.MoveTowards(from.z, to.z, step));
@@ -79,11 +98,8 @@ public static unsafe class RacerMath {
 
   /// <summary>Headless harness flag "-command vx vy yaw" (the last one wins); false when absent.</summary>
   public static bool TryCommandArg(out Vector3 cmd) {
-    var args = System.Environment.GetCommandLineArgs(); var ci = System.Globalization.CultureInfo.InvariantCulture;
-    bool found = false; cmd = Vector3.zero;
-    for (int i = 0; i + 3 < args.Length; i++)
-      if (args[i] == "-command") { cmd = new Vector3(float.Parse(args[i + 1], ci), float.Parse(args[i + 2], ci), float.Parse(args[i + 3], ci)); found = true; }
-    return found;
+    cmd = Vector3.zero; if (!CliArgs.TryFloats("-command", 3, out var v)) return false;
+    cmd = new Vector3(v[0], v[1], v[2]); return true;
   }
 }
 

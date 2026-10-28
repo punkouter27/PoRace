@@ -21,11 +21,9 @@ public unsafe class ParityRecorder : MonoBehaviour {
   bool _done;
 
   void Awake() {
-    var args = System.Environment.GetCommandLineArgs();  // -seconds S  -parityFile name.json  -parityDir <abs dir>
-    for (int i = 0; i + 1 < args.Length; i++) {
-      if (args[i] == "-seconds") seconds = float.Parse(args[i + 1], CultureInfo.InvariantCulture);
-      if (args[i] == "-parityFile") fileName = args[i + 1];
-    }
+    // -seconds S  -parityFile name.json  -parityDir <abs dir>
+    if (CliArgs.TryFloat("-seconds", out float s)) seconds = s;
+    if (CliArgs.TryString("-parityFile", out var pf)) fileName = pf;
     MjScene.Instance.postUpdateEvent += OnPostStep;
   }
   void OnDestroy() { if (MjScene.InstanceExists) MjScene.Instance.postUpdateEvent -= OnPostStep; }
@@ -62,8 +60,7 @@ public unsafe class ParityRecorder : MonoBehaviour {
   void Finish() {
     _done = true;
     var dir = Path.Combine(Application.dataPath, "..", "docs", "parity");
-    var args = System.Environment.GetCommandLineArgs();  // headless player: -parityDir <abs path>
-    for (int i = 0; i + 1 < args.Length; i++) if (args[i] == "-parityDir") dir = args[i + 1];
+    if (CliArgs.TryString("-parityDir", out var pd)) dir = pd;   // headless player: -parityDir <abs path>
     Directory.CreateDirectory(dir);
     var path = Path.GetFullPath(Path.Combine(dir, fileName));
     File.WriteAllText(path, "{\"frames\":[\n" + string.Join(",\n", _frames) + "\n]}");

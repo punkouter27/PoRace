@@ -1,9 +1,21 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
 # PoRace agent directives (Unity)
 
-Read `docs/` and `tasks.md` before starting a task.
+Read `docs/` and `tasks.md` before starting a task. `AGENTS.md` holds the same rules for other agents; keep the two in sync.
+
+## Commands
+- Editor automation (Git Bash, editor open): `source tools/ed.sh`, then `recompile`, `ueval 'C#;'`, `ulog <substr>`, `ubuild Build/X/PoRace.exe '["Assets/Scenes/A.unity"]'`.
+- Player build, editor closed: `Unity.exe -batchmode -quit -projectPath . -executeMethod BuildCli.Windows [-buildPath Build/PoRace/PoRace.exe] [-scenes A.unity,B.unity]` (the first scene is the start scene). Unity 6000.6.0f1.
+- Headless race test: `Build/PoRace/PoRace.exe -batchmode -nographics -raceTest [-timeScale 4] [-seed 7] [-racers 4 | -dogMask 5] [-matt] [-laps 2] [-noTactics]`. Other probes: `-replay <json>` (parity), `-parityDir <dir>`, `-shots <dir>`, `-frameProbe 20`, `-gfx mobile|pc`.
+- Editor tests: `Assets/Tests/Editor` (`NoPhysXTest`); run them with Unity's `-runTests -testPlatform EditMode -testFilter <Name>`.
+- Trainer (Docker image `porace-trainer`): `docker run --rm --init --log-driver none --gpus all -v <repo>\training:/work porace-trainer python train.py --env joystick --logdir runs/<name>`. Use `--init --log-driver none`, because without them the container became an unkillable zombie.
+- Gate a run (export ONNX, eval, reference, Unity replay): `training/gate.sh runs/<name>`. Variants: `gate100.sh`, `gatespeed.sh`, `gateall.sh`. Matt has its own ladder probe in `training/matt/probe_ckpts.py`.
 
 ## Codebase map
-- `Assets/Scripts/`: runtime. `Go2Controller` / `MattController` / `G1Controller` (obs build, 50 Hz policy on `MjScene.ctrlCallback`), `PolicyRunner` (ONNX), `RaceOrchestrator` (1 racer) / `MultiRaceOrchestrator` (up to 4 in one MuJoCo model, tactics), `MapDefinition` + `CreatureDefinition` registries (`Assets/Resources/{Maps,Creatures}`). `Broadcast/`: spectator layer (director cams, strain, hazards/chat, predictions, weather, replay, telemetry, audio, VFX).
+- `Assets/Scripts/`: runtime. `Go2Controller` / `MattController` / `G1Controller` (obs build, 50 Hz policy on `MjScene.ctrlCallback`), `PolicyRunner` (ONNX), `MultiRaceOrchestrator` (1-5 racers in one MuJoCo model, tactics), `MapDefinition` + `CreatureDefinition` registries (`Assets/Resources/{Maps,Creatures}`). `Broadcast/`: spectator layer (director cams, strain, hazards/chat, predictions, weather, replay, telemetry, audio, VFX).
 - `Assets/Editor/`: CLI builders (`TrackBuilder`, `BroadcastBuilder`, `CreatureBuilder`, `MenuBuilder`, `BuildCli`, `WebGLBuild`). Scenes are composed by these, not by hand.
 - `Assets/MuJoCo/`: Unity-flattened MJCF (`training/flatten_for_unity.py`). `Assets/Policies/`: shipped ONNX.
 - `training/`: Docker trainer (`train.py --env ...`, `eval.py --rung ...`, `export_onnx.py`), Go2 envs in `go2/`, Matt in `matt/`, G1 in `g1/`. Runs land in `training/runs/` (gitignored). History and decisions: `rl_optimization_log.md`.

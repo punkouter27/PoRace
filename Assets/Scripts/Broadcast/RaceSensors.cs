@@ -8,7 +8,7 @@ namespace PoRace {
 
 /// <summary>Per-racer measurements shared by the broadcast layer, computed once per 50 Hz control step from mjData:
 /// joint effort (|actuator_force| / forcerange, smoothed), mechanical power sum |tau * qdot|, base speed, foot strikes
-/// (rising edge of a foot geom touching a world geom: floor, bank, rails, obstacles) and cube impacts. Read only:
+/// (rising edge of a foot geom touching a world geom: floor, bank, rails, obstacles). Cube hits: ContactImpulse. Read only:
 /// nothing here writes MuJoCo state.</summary>
 public unsafe class RaceSensors : MonoBehaviour {
   public MultiRaceOrchestrator race;
@@ -33,18 +33,15 @@ public unsafe class RaceSensors : MonoBehaviour {
 
   /// <summary>(racer, foot index (Go2: 0..3 FL FR RL RR; Matt: 0..1 L R), Unity position, base speed m/s).</summary>
   public event Action<Racer, int, Vector3, float> FootStrike;
-  /// <summary>(cube index, Unity position, speed lost m/s, racer hit or null).</summary>
-  public event Action<int, Vector3, float, Racer> CubeImpact;
 
   readonly Dictionary<Racer, State> _s = new Dictionary<Racer, State>();
-  readonly Vector3[] _cubeVel = new Vector3[Go2Model.NumCubes];
   int _step;
   public const float ForceRange = 24f;
 
   public State Of(Racer r) => r != null && _s.TryGetValue(r, out var s) ? s : null;
 
   void Awake() {
-    if (race == null) race = FindAnyObjectByType<MultiRaceOrchestrator>();
+    if (!BroadcastUi.Wired(this, race, nameof(race))) return;
     MjScene.Instance.postUpdateEvent += OnPostStep;
   }
   void OnDestroy() { if (MjScene.InstanceExists) MjScene.Instance.postUpdateEvent -= OnPostStep; }
@@ -69,7 +66,7 @@ public unsafe class RaceSensors : MonoBehaviour {
         s.footGeom[0] = Id(MujocoLib.mjtObj.mjOBJ_GEOM, "left_foot"); s.footGeom[1] = Id(MujocoLib.mjtObj.mjOBJ_GEOM, "right_foot");
       }
       s.baseDof = B.BaseDof;
-      for (int b = 0; b < (int)m->nbody; b++) if (m->body_rootid[b] == B.BaseBody) s.mass += (float)m->body_mass[b];
+      s.mass = (float)RacerMath.RootMass(m, B.BaseBody);
       _s[r] = s;
     }
   }
@@ -114,23 +111,6 @@ public unsafe class RaceSensors : MonoBehaviour {
         }
         s.down[f] = now;
       }
-    }
-
-    // Cube impacts: a cube that lost more than 1.5 m/s since the last control step hit something.
-    var dog = race.Live.FirstOrDefault(x => x.matt == null); if (dog == null) return;   // the cube pool lives in the dogs' model part
-    var any = dog.controller.Model;
-    for (int c = 0; c < Go2Model.NumCubes; c++) {
-      int v = any.CubeDof[c], q = any.CubeQpos[c];
-      var vel = new Vector3((float)d->qvel[v], (float)d->qvel[v + 1], (float)d->qvel[v + 2]);
-      float lost = (_cubeVel[c] - vel).magnitude; _cubeVel[c] = vel;
-      if (lost < 1.5f || d->qpos[q] > 15.0) continue;   // parked cubes live at x >= 20
-      var mj = new Vector3((float)d->qpos[q], (float)d->qpos[q + 1], (float)d->qpos[q + 2]);
-      Racer hit = null; float best = 0.6f;
-      foreach (var r in race.Live) {
-        var B = r.Body; float dx = (float)d->qpos[B.BaseQpos] - mj.x, dy = (float)d->qpos[B.BaseQpos + 1] - mj.y;
-        float dist = Mathf.Sqrt(dx * dx + dy * dy); if (dist < best) { best = dist; hit = r; }
-      }
-      CubeImpact?.Invoke(c, new Vector3(mj.x, mj.z, mj.y), lost, hit);
     }
   }
 

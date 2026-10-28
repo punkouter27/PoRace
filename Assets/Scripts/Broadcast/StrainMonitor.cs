@@ -9,7 +9,11 @@ namespace PoRace {
 /// three or more joints above 85 % for half a second is REDLINING (an event for the director and the ticker).
 /// H.3: hot links also get an HDR rim glow (PoRace/StrainRim, attached only while hot, so cool legs cost nothing), a
 /// REDLINING racer's legs pulse, and every racer grimes over a race with its accumulated hit impulse (ContactImpulse
-/// wear, darkest at wearFull N·s).</summary>
+/// wear, darkest at wearFull N·s).
+/// B5 team rim: the same rim shader at low intensity in each racer's colour, so racers read at a glance on a small
+/// screen. PC: on every link (a hot leg blends from team colour to red); Mobile (GfxTier.TeamRimAll off): on the trunk
+/// and head only, legs keep the hot-only rim. Matt's skin already carries a rim slot (CreatureBuilder), which takes his
+/// colour through the property block.</summary>
 public class StrainMonitor : MonoBehaviour {
   public MultiRaceOrchestrator race;
   public RaceSensors sensors;
@@ -20,11 +24,13 @@ public class StrainMonitor : MonoBehaviour {
   public int redlineJoints = 3;
   public float redlineSeconds = 0.5f;
   public bool tintLegs = true;
+  [Tooltip("B5 team rim strength (x racer colour); 0 = off.")]
+  [Range(0f, 2f)] public float teamRim = 0.6f;
 
   public event Action<Racer> Redline;
 
-  class Part { public Renderer r; public Color baseColor; public int joint; public float shown = -1f, glow = -1f, wear = -1f; public Material[] plain, withRim; public bool rimOn; }
-  class Track { public readonly List<Part> parts = new List<Part>(); public float redFor, peak; public bool redline; public int count; }
+  class Part { public Renderer r; public Color baseColor; public int joint; public float shown = -1f, glow = -1f, wear = -1f; public Material[] plain, withRim; public bool rimOn, team; }
+  class Track { public readonly List<Part> parts = new List<Part>(); public float redFor, peak; public bool redline; public int count; public Color team; }
   readonly Dictionary<Racer, Track> _t = new Dictionary<Racer, Track>();
   MaterialPropertyBlock _mpb;
   static readonly int BaseColor = Shader.PropertyToID("_BaseColor"), Color_ = Shader.PropertyToID("_Color"),
@@ -36,7 +42,7 @@ public class StrainMonitor : MonoBehaviour {
   public int RedlineCount(Racer r) => _t.TryGetValue(r, out var t) ? t.count : 0;
 
   void Start() {
-    if (race == null) race = FindAnyObjectByType<MultiRaceOrchestrator>();
+    if (!BroadcastUi.Wired(this, race, nameof(race))) return;
     if (sensors == null) sensors = FindAnyObjectByType<RaceSensors>();
     if (contacts == null) contacts = FindAnyObjectByType<ContactImpulse>();
     _mpb = new MaterialPropertyBlock();
@@ -46,21 +52,34 @@ public class StrainMonitor : MonoBehaviour {
 
   /// <summary>Renderers of each leg link, keyed by the joint that moves that link (body FL_hip carries FL_hip_joint...).</summary>
   Track Bind(Racer r) {
-    var t = new Track(); if (r.matt != null) return t;   // leg tint maps Go2 link meshes; Matt's skin is one mesh
+    var t = new Track { team = r.color * teamRim }; bool team = teamRim > 0f && rimMaterial != null;
+    if (r.matt != null) {   // leg tint maps Go2 link meshes; Matt's skin is one mesh whose rim slot takes the team colour
+      if (team) foreach (var look in FindObjectsByType<MattLook>(FindObjectsSortMode.None)) if (look.controller == r.matt && look.body != null) TeamOnly(look.body, t.team, false);
+      return t;
+    }
     var root = r.controller.BaseTransform; if (root == null) return t;
     var bodyJoint = new Dictionary<string, int>();
     for (int i = 0; i < Go2Model.Nu; i++) bodyJoint[r.controller.prefix + Go2Model.ActuatorNames[i]] = i;   // actuator FL_hip == body FL_hip
+    bool always = team && GfxTier.TeamRimAll;
     foreach (var rend in root.GetComponentsInChildren<Renderer>()) {
+      bool leg = false;
       for (var p = rend.transform; p != null && p != root.parent; p = p.parent)
         if (bodyJoint.TryGetValue(p.name, out int j)) {
           var mat = rend.sharedMaterial;
           var c = mat == null ? Color.gray : mat.HasProperty(BaseColor) ? mat.GetColor(BaseColor) : mat.HasProperty(Color_) ? mat.GetColor(Color_) : Color.gray;
           var plain = rend.sharedMaterials; var withRim = plain;
           if (rimMaterial != null) { withRim = new Material[plain.Length + 1]; plain.CopyTo(withRim, 0); withRim[plain.Length] = rimMaterial; }
-          t.parts.Add(new Part { r = rend, baseColor = c, joint = j, plain = plain, withRim = withRim }); break;
+          t.parts.Add(new Part { r = rend, baseColor = c, joint = j, plain = always ? withRim : plain, withRim = withRim, team = always }); leg = true; break;
         }
+      if (!leg && team) TeamOnly(rend, t.team, true);   // trunk, head: a fixed team rim, set once
     }
     return t;
+  }
+
+  /// <summary>B5: a constant team-colour rim on a renderer that never strains (optionally appending the rim pass).</summary>
+  void TeamOnly(Renderer rend, Color c, bool addRim) {
+    if (addRim) { var m = rend.sharedMaterials; var w = new Material[m.Length + 1]; m.CopyTo(w, 0); w[m.Length] = rimMaterial; rend.sharedMaterials = w; }
+    rend.GetPropertyBlock(_mpb); _mpb.SetColor(RimColor, c); _mpb.SetFloat(Fill, 0f); rend.SetPropertyBlock(_mpb);
   }
 
   void Update() {
@@ -86,8 +105,8 @@ public class StrainMonitor : MonoBehaviour {
         p.shown = k; p.glow = glow; p.wear = wear; p.r.GetPropertyBlock(_mpb);
         var grime = Color.Lerp(p.baseColor, p.baseColor * new Color(0.42f, 0.38f, 0.33f, 1f), wear);
         var c = Color.Lerp(grime, Hot, k); _mpb.SetColor(BaseColor, c); _mpb.SetColor(Color_, c);
-        _mpb.SetColor(RimColor, Hot * (2.2f * glow)); _mpb.SetFloat(Fill, 0.15f * glow); p.r.SetPropertyBlock(_mpb);
-        bool rim = glow > 0.02f && rimMaterial != null;
+        _mpb.SetColor(RimColor, p.team ? Color.Lerp(t.team, Hot * 2.2f, glow) : Hot * (2.2f * glow)); _mpb.SetFloat(Fill, 0.15f * glow); p.r.SetPropertyBlock(_mpb);
+        bool rim = (glow > 0.02f || p.team) && rimMaterial != null;
         if (rim != p.rimOn) { p.rimOn = rim; p.r.sharedMaterials = rim ? p.withRim : p.plain; }
       }
     }
@@ -96,6 +115,8 @@ public class StrainMonitor : MonoBehaviour {
   // Actuator groups per standings mark: Go2 = four legs of three joints; Matt (G1 order) = left leg, right leg,
   // left arm, right arm (the waist is not shown).
   static readonly (int from, int to)[] DogLimbs = { (0, 3), (3, 6), (6, 9), (9, 12) }, HumanLimbs = { (0, 6), (6, 12), (15, 22), (22, 29) };
+  /// <summary>Actuator ranges per limb for a body with `nu` actuators (also RaceAudio's per-limb servo partials).</summary>
+  internal static (int from, int to)[] Limbs(int nu) => nu == Go2Model.Nu ? DogLimbs : HumanLimbs;
 
   /// <summary>Standings suffix: one mark per limb coloured by that limb's hardest-working joint, then REDLINE.</summary>
   string Marks(Racer r) {

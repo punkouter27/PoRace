@@ -23,8 +23,7 @@ public static unsafe class ModelCheck {
     Check(Math.Abs(m->opt.gravity[2] + 9.81) < 1e-6 && Math.Abs(m->opt.gravity[0]) < Eps && Math.Abs(m->opt.gravity[1]) < Eps,
           $"gravity ({m->opt.gravity[0]},{m->opt.gravity[1]},{m->opt.gravity[2]})");
 
-    double mass = 0;
-    for (int b = 0; b < (int)m->nbody; b++) if (m->body_rootid[b] == M.BaseBody) mass += m->body_mass[b];
+    double mass = RacerMath.RootMass(m, M.BaseBody);
     Check(Math.Abs(mass - 15.206408) < 1e-4, $"robot mass {mass}");
     for (int k = 0; k < Go2Model.NumCubes; k++) Check(Math.Abs(m->body_mass[M.CubeBody[k]] - 1.0) < Eps, $"cube{k} mass");
 

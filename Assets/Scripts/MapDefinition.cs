@@ -58,6 +58,14 @@ public class MapDefinition : ScriptableObject {
     return Mathf.Max(0f, BankHalfWidth - Mathf.Sign(b) * lateral) * Mathf.Tan(Mathf.Abs(b) * Mathf.Deg2Rad);
   }
 
+  /// <summary>No banking anywhere (all keys ~0 with flat tangents), so SurfaceHeight is 0 everywhere.</summary>
+  bool Flat {
+    get {
+      for (int i = 0; i < bankDeg.length; i++) { var k = bankDeg[i]; if (Mathf.Abs(k.value) >= 1e-3f || k.inTangent != 0f || k.outTangent != 0f) return false; }
+      return true;
+    }
+  }
+
   float[] _cum; float _length; int _n;
 
   void EnsureBuilt() {
@@ -100,7 +108,7 @@ public class MapDefinition : ScriptableObject {
   /// Brute force over the segments (a few dozen), fine once per frame for the camera.</summary>
   public float SurfaceHeightAt(Vector2 p) {
     EnsureBuilt();
-    if (_n == 0) return 0f;
+    if (_n == 0 || Flat) return 0f;
     float best = float.MaxValue, bs = 0f, bl = 0f;
     for (int i = 0; i < _n; i++) {
       Vector2 a = P(i), d = P(i + 1) - a; float len = d.magnitude; if (len < 1e-6f) continue; d /= len;
@@ -113,7 +121,10 @@ public class MapDefinition : ScriptableObject {
   /// <summary>Lane offsets for n racers, centred on the track, leftmost first.</summary>
   public float[] LaneOffsets(int n) {
     var r = new float[n];
-    for (int i = 0; i < n; i++) r[i] = ((n - 1) * 0.5f - i) * laneSpacing;
+    // More racers than grid slots (four dogs + Matt on a 1.65 m corridor): squeeze the lanes so the outer racers start
+    // 0.35 m inside the rails instead of in them (5 x 0.8 m put Red and Green at +-1.6: pinned, 668 un-sticks, DNF).
+    float spacing = n > gridSlots ? Mathf.Min(laneSpacing, 2f * (halfWidth - 0.35f) / (n - 1)) : laneSpacing;
+    for (int i = 0; i < n; i++) r[i] = ((n - 1) * 0.5f - i) * spacing;
     return r;
   }
 }
@@ -154,9 +165,10 @@ public static class RaceConfig {
   public static readonly Color MattColor = new Color(1f, 0.62f, 0.18f);
   public static int dogMask = 0b1111;       // which dogs race (bit k = Dogs[k])
   public static bool matt = false;          // Matt (the human racer) on the grid; flat maps only
+  public static bool handicap = false;      // head starts that equalise expected finish times (MultiRaceOrchestrator)
   // Self-running app: launch straight into a race, then race after race (MultiRaceOrchestrator). Off after the player
   // presses Menu, or when started with -menu.
-  public static bool autoplay = !System.Array.Exists(System.Environment.GetCommandLineArgs(), a => a == "-menu");
+  public static bool autoplay = !CliArgs.Has("-menu");
   public static int autoplayMap = -1;       // index into the flat maps of MapRegistry; -1 = not started yet
 
   /// <summary>Next race of the self-running app: the flat maps in turn (Matt races on flat ground only), four dogs and
@@ -166,8 +178,11 @@ public static class RaceConfig {
     if (flat.Length == 0) return;
     autoplayMap = (autoplayMap + 1) % flat.Length;
     dogMask = 0b1111; laps = 0; seed = -1; fromMenu = true; matt = true;
+    var next = flat[autoplayMap];
+    // Season mode (SeasonMode.cs) scores the race on screen and picks the next round's map and seed; -noSeason = plain rotation
+    if (Season.NextRound(flat, out var seasonMap, out int seasonSeed)) { next = seasonMap; seed = seasonSeed; }
     QualitySettings.vSyncCount = 0; Application.targetFrameRate = 30;
-    UnityEngine.SceneManagement.SceneManager.LoadScene(flat[autoplayMap].sceneName);
+    UnityEngine.SceneManagement.SceneManager.LoadScene(next.sceneName);
   }
   public static int laps = 0;        // 0 = the map's default
   public static int seed = -1;       // -1 = different every race

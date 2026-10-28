@@ -14,8 +14,7 @@ public unsafe class PerfProbe : MonoBehaviour {
   public double MeanStepMs => _n > 0 ? _stepMs / _n : 0;
 
   void Awake() {
-    var args = Environment.GetCommandLineArgs();
-    for (int i = 0; i + 1 < args.Length; i++) if (args[i] == "-perf") _seconds = float.Parse(args[i + 1], System.Globalization.CultureInfo.InvariantCulture);
+    if (CliArgs.TryFloat("-perf", out float sec)) _seconds = sec;
     MjScene.Instance.preUpdateEvent += (s, a) => _sw.Restart();
     MjScene.Instance.postUpdateEvent += OnPost;
   }

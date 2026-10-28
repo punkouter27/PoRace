@@ -12,6 +12,7 @@ import json
 import sys
 from pathlib import Path
 
+import mujoco
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -63,6 +64,9 @@ def graduate(params, episodes=100, first=0):
 # kneeling counts as fallen, which a bare up-vector test lets through.
 PELVIS_MIN = 0.7
 SYMMETRY_MAX = 0.05   # |stance share L - R| / mean
+# p99 of total foot normal force / body weight while walking: a human walk peaks ~1.2 BW (jog ~2.5); a policy that
+# stomps (or the impratio-100 force blow-ups of m4) lands far above. Generous so it only catches unphysical gaits.
+FORCE_MAX = 3.0
 TIERS = ("toddler", "child", "adult")
 
 
@@ -74,6 +78,7 @@ def episode(sim, rng, segments, push_at=None, grade=0.0, ramp=1.0):
     az, t = rng.uniform(0, 2 * np.pi), np.arctan(grade)
     sim.m.opt.gravity[:] = 9.81 * np.array([np.sin(t) * np.cos(az), np.sin(t) * np.sin(az), -np.cos(t)])
   ok, errs, stance, other, jerk, acts, push, n = True, [], np.zeros(2), 0, [], [], 0, 0
+  weight, f6, force = sim.m.body_subtreemass[sim.pelvis] * 9.81, np.zeros(6), []
   for cmd, secs in segments:
     for k in range(int(secs / base.CTRL_DT)):
       if push_at is not None and n == int(push_at / base.CTRL_DT):
@@ -84,13 +89,15 @@ def episode(sim, rng, segments, push_at=None, grade=0.0, ramp=1.0):
         push -= base.DECIMATION
         if push <= 0: sim.d.xfrc_applied[:] = 0
       ok &= bool(sim.upright()) and sim.d.qpos[2] > PELVIS_MIN
-      feet, nonfoot = np.zeros(2, bool), False
-      for g1, g2 in zip(sim.d.contact.geom1[:sim.d.ncon], sim.d.contact.geom2[:sim.d.ncon]):
+      feet, nonfoot, fn = np.zeros(2, bool), False, 0.0
+      for i, (g1, g2) in enumerate(zip(sim.d.contact.geom1[:sim.d.ncon], sim.d.contact.geom2[:sim.d.ncon])):
         if sim.floor not in (g1, g2): continue
         g = g2 if g1 == sim.floor else g1
-        if g in sim.feet: feet[sim.feet.index(g)] = True
+        if g in sim.feet:
+          feet[sim.feet.index(g)] = True; mujoco.mj_contactForce(sim.m, sim.d, i, f6); fn += f6[0]
         else: nonfoot = True
       other += nonfoot
+      if k >= int(ramp / base.CTRL_DT): force.append(fn / weight)
       acts.append(a)
       if len(acts) >= 3: jerk.append(float(np.mean(np.abs(acts[-1] - 2 * acts[-2] + acts[-3]))))
       if k >= int(ramp / base.CTRL_DT):
@@ -100,7 +107,7 @@ def episode(sim, rng, segments, push_at=None, grade=0.0, ramp=1.0):
   share = stance / max(stance.sum(), 1)
   sym = abs(share[0] - share[1]) / max(share.mean(), 1e-6) if stance.sum() else 0.0
   return dict(ok=bool(ok), err=float(np.mean(errs)) if errs else 0.0, sym=float(sym), nonfoot=int(other),
-              jerk=float(np.mean(jerk)) if jerk else 0.0)
+              jerk=float(np.mean(jerk)) if jerk else 0.0, force=float(np.percentile(force, 99)) if force else 0.0)
 
 
 def ladder(params, seeds=10, upto="adult", out=None):
@@ -112,7 +119,7 @@ def ladder(params, seeds=10, upto="adult", out=None):
                 ("push standing", int(0.9 * seeds), lambda r: episode(sim, r, [([0, 0, 0], 6)], push_at=2), lambda e: e["ok"]),
                 ("push walking", int(0.9 * seeds), lambda r: episode(sim, r, [([0.5, 0, 0], 6)], push_at=2), lambda e: e["ok"])],
     "child": [("walk 0.5/1.0/1.5", int(0.9 * seeds), lambda r: episode(sim, r, [([v, 0, 0], 5) for v in (0.5, 1.0, 1.5)]),
-               lambda e: e["ok"] and e["err"] < 0.2 and e["sym"] < SYMMETRY_MAX and not e["nonfoot"])],
+               lambda e: e["ok"] and e["err"] < 0.2 and e["sym"] < SYMMETRY_MAX and not e["nonfoot"] and e["force"] < FORCE_MAX)],
     "adult": [("jog 2.5", int(0.9 * seeds), lambda r: episode(sim, r, [([2.5, 0, 0], 6)], ramp=2.0), lambda e: e["ok"] and e["err"] < 0.3),
               ("turn 0.8 rad/s", int(0.9 * seeds), lambda r: episode(sim, r, [([1.0, 0, 0.8], 6)]), lambda e: e["ok"] and e["err"] < 0.25),
               ("10 % grade", int(0.9 * seeds), lambda r: episode(sim, r, [([1.0, 0, 0], 8)], grade=0.10), lambda e: e["ok"] and e["err"] < 0.25)],
@@ -123,10 +130,11 @@ def ladder(params, seeds=10, upto="adult", out=None):
     for name, need, run, ok in checks[tier]:
       eps = [run(np.random.default_rng(s)) for s in range(seeds)]
       passes = sum(bool(ok(e)) for e in eps)
-      stat = {k: round(float(np.mean([e[k] for e in eps])), 4) for k in ("err", "sym", "nonfoot", "jerk")}
+      stat = {k: round(float(np.mean([e[k] for e in eps])), 4) for k in ("err", "sym", "nonfoot", "jerk", "force")}
       report[f"{tier}/{name}"] = dict(passes=passes, need=need, **stat)
       print(f"MATT-{tier.upper()} {name}: {passes}/{seeds} (need {need}) -> {'PASS' if passes >= need else 'FAIL'}  "
-            f"err {stat['err']:.3f} sym {stat['sym']:.3f} nonfoot {stat['nonfoot']:.1f} jerk {stat['jerk']:.3f}", flush=True)
+            f"err {stat['err']:.3f} sym {stat['sym']:.3f} nonfoot {stat['nonfoot']:.1f} jerk {stat['jerk']:.3f} "
+            f"force {stat['force']:.2f} BW", flush=True)
       tier_ok &= passes >= need
     passed_all &= tier_ok
     if not tier_ok:

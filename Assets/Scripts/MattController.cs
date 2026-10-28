@@ -46,6 +46,13 @@ public unsafe class MattController : MonoBehaviour, IParitySource, IRacer {
   public bool Locomoting => mode == Mode.Locomotion && _policy != null;
   public string ModeName => mode.ToString();
   public float SimDt => MattSpec.SimDt;
+  public float MaxYawRate => 0.8f;   // trained to 1.0 rad/s, graduated on 0.8 (training/matt/sim.py)
+  public bool UsesUnstick => false;  // slow to accelerate: an un-stick would restart his ramp forever
+  public bool HoldsHeadingAtRest => true;   // marches in place and drifts 15-60 deg in 3 s on a zero command (probe_stand.py)
+  public bool FlatGroundOnly => true;       // training/matt/env.py: flat floor only
+  public string[] FootGeomNames => Feet;
+  public float FootStrikeMassScale => 4f;   // a human foot strike brings shank + foot (~5.4 kg)
+  static readonly string[] Feet = { "left_foot", "right_foot" };
   public void StartLocomotion() { mode = Mode.Locomotion; command = Vector3.zero; }
 
   const int N = MattSpec.Nu;
@@ -58,9 +65,8 @@ public unsafe class MattController : MonoBehaviour, IParitySource, IRacer {
 
   void Awake() {
     Time.fixedDeltaTime = MattSpec.SimDt;
-    var args = Environment.GetCommandLineArgs();
     if (alone && RacerMath.TryCommandArg(out var cmd)) command = cmd;
-    for (int i = 0; i + 1 < args.Length; i++) if (args[i] == "-mattMode" && Enum.TryParse(args[i + 1], out Mode m)) mode = m;
+    if (CliArgs.TryEnum("-mattMode", out Mode m)) mode = m;
     MjScene.Instance.postInitEvent += OnInit;
     MjScene.Instance.preUpdateEvent += OnPre;
     MjScene.Instance.ctrlCallback += OnCtrl;
@@ -112,7 +118,7 @@ public unsafe class MattController : MonoBehaviour, IParitySource, IRacer {
     Must(m->opt.integrator == (int)MujocoLib.mjtIntegrator.mjINT_EULER && m->opt.cone == (int)MujocoLib.mjtCone.mjCONE_PYRAMIDAL, "integrator/cone");
     Must(m->opt.iterations == 1 && m->opt.ls_iterations == 5, $"iterations {m->opt.iterations}/{m->opt.ls_iterations}");
     Must(Math.Abs(m->opt.impratio - MattSpec.ImpRatio) < 1e-6, $"impratio {m->opt.impratio} (a race with Matt compiles at {MattSpec.ImpRatio})");
-    double mass = 0; for (int b = 0; b < (int)m->nbody; b++) if (m->body_rootid[b] == BaseBody) mass += m->body_mass[b];
+    double mass = RacerMath.RootMass(m, BaseBody);
     Must(Math.Abs(mass - MattSpec.Mass) < 1e-3, $"mass {mass}");
     for (int i = 0; i < N; i++) {
       int a = _act[i];
