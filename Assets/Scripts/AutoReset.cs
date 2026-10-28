@@ -32,7 +32,8 @@ public unsafe class AutoReset : MonoBehaviour {
     float x = (float)d->qpos[B.BaseQpos], y = (float)d->qpos[B.BaseQpos + 1];
     float speed = Mathf.Sqrt((float)(d->qvel[B.BaseDof] * d->qvel[B.BaseDof] + d->qvel[B.BaseDof + 1] * d->qvel[B.BaseDof + 1]));
 
-    State = upZ < 0.0 ? RaceState.FALLEN_RECOVERING : upZ < 0.7 ? RaceState.STUMBLE : RaceState.RACING;
+    // Fallen: upside down, or the body's own test (Matt lying on his back reads upZ ~0.03; the dogs' Upright is upZ > 0)
+    State = upZ < 0.0 || !B.Upright ? RaceState.FALLEN_RECOVERING : upZ < 0.7 ? RaceState.STUMBLE : RaceState.RACING;
     _fallenFor = State == RaceState.FALLEN_RECOVERING ? _fallenFor + dt : 0f;
     // Dogs: the requested mode (a stall also counts while the getup policy runs), as before Matt joined.
     bool wantsToMove = (controller != null && matt == null ? controller.mode == Go2Mode.Locomotion : B.Locomoting) && B.Command.sqrMagnitude > 0.01f;

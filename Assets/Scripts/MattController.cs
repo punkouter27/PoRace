@@ -61,7 +61,8 @@ public unsafe class MattController : MonoBehaviour, IParitySource, IRacer {
   readonly float[] _obs = new float[MattSpec.ObsDim], _lastAction = new float[N];
   readonly double[] _sens = new double[11];   // linvel 3, gyro 3, quat 4, torso up z
   int _linvel, _gyro, _quat, _up, _step, _ctrlStep; bool _ready;
-  PolicyRunner _policy; Vector3 _cmd;
+  PolicyRunner _policy; Vector3 _cmd; float _downFor;
+  const float FallenPelvisZ = 0.6f, FallenUpZ = 0.3f, LimpAfter = 0.3f;   // down: pelvis (m), up-vector z; limp after (s)
 
   void Awake() {
     Time.fixedDeltaTime = MattSpec.SimDt;
@@ -140,7 +141,7 @@ public unsafe class MattController : MonoBehaviour, IParitySource, IRacer {
     else { for (int i = 0; i < 6; i++) d->qvel[BaseDof + i] = 0; for (int i = 0; i < N; i++) d->qvel[_jd[i]] = 0; }
     RacerMath.Place(d->qpos, BaseQpos, spawnMj, spawnYaw);
     for (int i = 0; i < N; i++) { d->qpos[_jq[i]] = MattSpec.DefaultPose[i]; SetCtrl(d, i, MattSpec.DefaultPose[i]); }
-    Array.Clear(_lastAction, 0, N); _cmd = Vector3.zero; _step = 0; _ctrlStep = 0;
+    Array.Clear(_lastAction, 0, N); _cmd = Vector3.zero; _step = 0; _ctrlStep = 0; _downFor = 0f; Upright = true;
     MujocoLib.mj_forward(m, d);
   }
 
@@ -153,11 +154,19 @@ public unsafe class MattController : MonoBehaviour, IParitySource, IRacer {
   void OnCtrl(object sender, MjStepArgs a) {
     if (!_ready || _step++ % MattSpec.Decimation != 0) return;
     var d = a.data;
-    Upright = _sens[10] > 0.0;
+    // Down = the ladder's fallen test (training/matt/sim.py): pelvis below 0.6 m or the torso tipped past ~70 deg. The
+    // old up-z > 0 test passed him lying on his back (0.03), so the walking policy kept flailing every joint at the floor.
+    bool down = d->qpos[BaseQpos + 2] < FallenPelvisZ || _sens[10] < FallenUpZ;
+    _downFor = down ? _downFor + MattSpec.SimDt * MattSpec.Decimation : 0f;
+    Upright = !down;
     _cmd = RacerMath.Slew(_cmd, command, Go2Controller.CmdSlewStep);
     BuildObs(d);
     var t0 = Time.realtimeSinceStartupAsDouble;
-    if (mode == Mode.Locomotion && _policy != null) {
+    if (_downFor > LimpAfter) {
+      // Limp on the ground (no getup policy yet): targets follow the joints, so the PD springs push nothing into the floor
+      // and only joint damping acts, a ragdoll settle until AutoReset sends him back to the checkpoint.
+      for (int i = 0; i < N; i++) { _lastAction[i] = 0f; SetCtrl(d, i, (float)d->qpos[_jq[i]]); }
+    } else if (mode == Mode.Locomotion && _policy != null) {
       var act = _policy.Run(_obs, MattSpec.ObsDim);
       for (int i = 0; i < N; i++) { _lastAction[i] = act[i]; SetCtrl(d, i, MattSpec.DefaultPose[i] + MattSpec.ActionScale * act[i]); }   // trainer does not clip actions
     } else {
@@ -179,7 +188,8 @@ public unsafe class MattController : MonoBehaviour, IParitySource, IRacer {
       if ((mine1 ? b2 : b1) != 0) continue;   // world geoms only (floor, rails)
       n++; if (d->contact[i].dist < deepest) { deepest = d->contact[i].dist; who = System.Runtime.InteropServices.Marshal.PtrToStringAnsi(MujocoLib.mj_id2name(m, (int)MujocoLib.mjtObj.mjOBJ_GEOM, mine1 ? g1 : g2)); }
     }
-    Debug.Log($"[ContactProbe] t={d->time:F1} pelvisZ={d->qpos[BaseQpos + 2]:F3} up={_sens[10]:F2} worldContacts={n} deepest={deepest * 100:F1}cm ({who}) ncon={d->ncon}");
+    double qd = 0; for (int i = 0; i < N; i++) qd += Math.Abs(d->qvel[_jd[i]]); qd /= N;
+    Debug.Log($"[ContactProbe] t={d->time:F1} jointSpeed={qd:F2}rad/s down={_downFor:F1}s pelvisZ={d->qpos[BaseQpos + 2]:F3} up={_sens[10]:F2} worldContacts={n} deepest={deepest * 100:F1}cm ({who}) ncon={d->ncon}");
   }
 
   /// <summary>linvel 3, gyro 3, gravity 3, command 3, q - default 29, qvel 29, last action 29, cos(phase) 2, sin(phase) 2.
