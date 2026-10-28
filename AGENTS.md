@@ -35,3 +35,10 @@ See the **Commands** section of `CLAUDE.md` for the editor helpers (`tools/ed.sh
 ## 4. Output Directives
 - **Strategic Direction:** If a code change exceeds 100 lines with no pending questions, offer 3 architecture/roadmap questions.
 - **TL;DR:** Append a ~20-word TL;DR to responses over 100 words.
+
+## CI/CD and Azure (same section in every Po repo)
+
+- A push to the default branch builds WebGL and deploys it to the game's Azure Static Web App (`.github/workflows/webgl.yml`). It runs on the self-hosted `unity` runner on the dev PC, one Unity build at a time across all games, so the PC must be on. `tools/deploy_webgl.ps1` stays for a manual deploy, but CI is the normal path.
+- The workflow has no `pull_request` trigger, on purpose: the repo is public and the runner is a real PC. Never add one.
+- Tests pass on any machine: no drive-letter, temp-folder or working-directory assumptions, and no live config value hard-coded as an expected result (read it from the same config the app reads).
+- A red run on the default branch gets an ntfy push from the CI watcher in PoPunkouterSoftware. Fix it, or say why it is red.
