@@ -165,6 +165,21 @@ public unsafe class MattController : MonoBehaviour, IParitySource, IRacer {
     }
     LastInferenceMs = (float)((Time.realtimeSinceStartupAsDouble - t0) * 1000.0);
     _ctrlStep++;
+    if (_probe && _ctrlStep % 25 == 0) ContactProbe(a.model, d);
+  }
+
+  static readonly bool _probe = CliArgs.Has("-contactProbe");
+  /// <summary>-contactProbe: twice a second, Matt's pelvis height, his geoms touching the world and the deepest penetration.</summary>
+  void ContactProbe(MujocoLib.mjModel_* m, MujocoLib.mjData_* d) {
+    int n = 0; double deepest = 0; string who = "";
+    for (int i = 0; i < d->ncon; i++) {
+      int g1 = d->contact[i].geom1, g2 = d->contact[i].geom2;
+      int b1 = m->body_rootid[m->geom_bodyid[g1]], b2 = m->body_rootid[m->geom_bodyid[g2]];
+      bool mine1 = b1 == BaseBody, mine2 = b2 == BaseBody; if (mine1 == mine2) continue;
+      if ((mine1 ? b2 : b1) != 0) continue;   // world geoms only (floor, rails)
+      n++; if (d->contact[i].dist < deepest) { deepest = d->contact[i].dist; who = System.Runtime.InteropServices.Marshal.PtrToStringAnsi(MujocoLib.mj_id2name(m, (int)MujocoLib.mjtObj.mjOBJ_GEOM, mine1 ? g1 : g2)); }
+    }
+    Debug.Log($"[ContactProbe] t={d->time:F1} pelvisZ={d->qpos[BaseQpos + 2]:F3} up={_sens[10]:F2} worldContacts={n} deepest={deepest * 100:F1}cm ({who}) ncon={d->ncon}");
   }
 
   /// <summary>linvel 3, gyro 3, gravity 3, command 3, q - default 29, qvel 29, last action 29, cos(phase) 2, sin(phase) 2.

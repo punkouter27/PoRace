@@ -1,0 +1,65 @@
+{
+ "toddler/stand 10 s": {
+  "passes": 10,
+  "need": 10,
+  "err": 0.0223,
+  "sym": 0.0,
+  "nonfoot": 0.0,
+  "jerk": 0.0049,
+  "force": 1.011
+ },
+ "toddler/push standing": {
+  "passes": 10,
+  "need": 9,
+  "err": 0.0756,
+  "sym": 0.0,
+  "nonfoot": 0.0,
+  "jerk": 0.0195,
+  "force": 1.341
+ },
+ "toddler/push walking": {
+  "passes": 10,
+  "need": 9,
+  "err": 0.0974,
+  "sym": 0.073,
+  "nonfoot": 0.0,
+  "jerk": 0.091,
+  "force": 1.7024
+ },
+ "child/walk 0.5/1.0/1.5": {
+  "passes": 9,
+  "need": 9,
+  "err": 0.1264,
+  "sym": 0.025,
+  "nonfoot": 0.0,
+  "jerk": 0.1328,
+  "force": 2.0462
+ },
+ "adult/jog 2.5": {
+  "passes": 0,
+  "need": 9,
+  "err": 1.3882,
+  "sym": 0.0597,
+  "nonfoot": 66.2,
+  "jerk": 0.123,
+  "force": 2.5423
+ },
+ "adult/turn 0.8 rad/s": {
+  "passes": 10,
+  "need": 9,
+  "err": 0.1632,
+  "sym": 0.043,
+  "nonfoot": 0.0,
+  "jerk": 0.1301,
+  "force": 2.0951
+ },
+ "adult/10 % grade": {
+  "passes": 0,
+  "need": 9,
+  "err": 0.7291,
+  "sym": 0.1477,
+  "nonfoot": 106.7,
+  "jerk": 0.1125,
+  "force": 2.9571
+ }
+}
