@@ -25,7 +25,7 @@ Read `docs/` and `tasks.md` before starting a task. `AGENTS.md` holds the same r
 - Proposals backlog: `docs/proposals_*.md`.
 
 ## Workflow
-- Work on `main` (this repo has no `master`). Stage and commit pending work before any git pull/sync.
+- Work on `master`. Stage and commit pending work before any git pull/sync.
 - Build watermark: show an automated `YYMMDD` build-date watermark in the bottom-right of the HUD.
 - Keep Unity's **Run In Background** enabled. Drive headless runs and automation through the Unity CLI (`tools/ed.sh`, `-batchmode` player builds).
 - Build scenes, prefabs and hierarchies with CLI automation. Use headless Blender (or Blender MCP) when the main scene needs changes.

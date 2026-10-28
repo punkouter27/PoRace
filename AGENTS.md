@@ -1,7 +1,7 @@
 # AGENTS.md — Unity / Unreal agent directives
 
 ## 1. Workflow, Tooling & Asset Pipeline
-- **Git & Docs:** Work on `main` only (this repo has no `master`). Stage/commit before any sync/pull. Check `docs/` and `tasks.md` first.
+- **Git & Docs:** Work on `master` only. Stage/commit before any sync/pull. Check `docs/` and `tasks.md` first.
 - **Automation & Headless:** Drive scene/prefab/level setup via CLI (`tools/ed.sh`, `-batchmode`). Use headless Blender or Blender MCP.
 - **UI Changes:** Export an HTML report with annotated before/after screenshots to `SCREENSHOTS/`.
 - **Build Watermark:** Show an automated `YYMMDD` build-date watermark bottom-right of the HUD.
